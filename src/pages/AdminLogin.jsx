@@ -8,8 +8,8 @@ const AdminLogin = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [email, setEmail] = useState('admin@sarail1to99plus.com');
-  const [password, setPassword] = useState('admin@sarail2026!');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
