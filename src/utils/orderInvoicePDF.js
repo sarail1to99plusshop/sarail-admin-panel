@@ -254,3 +254,4 @@ export const generateOrderInvoicePDF = (order) => {
     printWindow.document.close();
   }
 };
+
