@@ -14,8 +14,10 @@ import {
   FiEye,
   FiX,
   FiCheck,
+  FiPrinter,
 } from 'react-icons/fi';
 import { TbTruckDelivery } from 'react-icons/tb';
+import { generateOrderInvoicePDF } from '../utils/orderInvoicePDF';
 import {
   fetchAdminOrdersAPI,
   shipOrderSteadfastAPI,
@@ -614,7 +616,16 @@ const AdminOrders = () => {
             </div>
 
             {/* Footer */}
-            <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex justify-end">
+            <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <button
+                onClick={() => generateOrderInvoicePDF(selectedOrderDetails)}
+                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm shadow-indigo-600/25 flex items-center gap-1.5 active:scale-95"
+                title="Download / Print Delivery Invoice PDF"
+              >
+                <FiPrinter className="w-3.5 h-3.5" />
+                <span>Download Invoice (PDF)</span>
+              </button>
+
               <button
                 onClick={() => setSelectedOrderDetails(null)}
                 className="px-5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-colors"

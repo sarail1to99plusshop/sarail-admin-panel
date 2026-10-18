@@ -5,11 +5,13 @@ import {
   FiShoppingBag,
   FiBox,
   FiDownload,
+  FiPrinter,
   FiRefreshCw,
   FiCheckCircle,
   FiArrowUpRight,
 } from 'react-icons/fi';
 import { fetchMonthlyDeliveredReportAPI } from '../services/api';
+import { generateDeliveryReportPDF } from '../utils/deliveryReportPDF';
 
 const MONTH_NAMES = [
   { value: '', label: 'All Months' },
@@ -99,6 +101,15 @@ const AdminReports = () => {
     document.body.removeChild(link);
   };
 
+  // Download Delivered Report as PDF
+  const handleDownloadPDF = () => {
+    if (!reportData?.orders || reportData.orders.length === 0) {
+      alert('No delivered orders to generate a PDF report for this period.');
+      return;
+    }
+    generateDeliveryReportPDF(reportData, { year, month });
+  };
+
   const summary = reportData?.summary || {};
   const monthlySummary = reportData?.monthlySummary || [];
   const topProducts = reportData?.topDeliveredProducts || [];
@@ -109,26 +120,37 @@ const AdminReports = () => {
       {/* ---------------- PAGE HEADER ---------------- */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+          <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
             Delivered Products & Monthly Sales Report
           </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Verified delivered product performance • Monthly trends • CSV Export
+          <p className="text-xs text-slate-500 mt-0.5">
+            Verified delivered product performance • Monthly trends • PDF & CSV Export
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <button
+            onClick={handleDownloadPDF}
+            disabled={orders.length === 0}
+            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-md shadow-indigo-600/25 transition-all active:scale-95 disabled:opacity-50"
+            title="Download Official Delivery Report PDF"
+          >
+            <FiPrinter className="w-3.5 h-3.5" />
+            <span>Download PDF</span>
+          </button>
+          <button
             onClick={handleExportCSV}
             disabled={orders.length === 0}
-            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-md shadow-emerald-600/30 transition-all disabled:opacity-50"
+            className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs border border-slate-200 transition-all active:scale-95 disabled:opacity-50"
+            title="Export Spreadsheet CSV"
           >
             <FiDownload className="w-3.5 h-3.5" />
             <span>Export CSV</span>
           </button>
           <button
             onClick={loadReport}
-            className="p-2 rounded-xl bg-white dark:bg-[#1e293b] text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700/60 shadow-sm"
+            className="p-2 rounded-xl bg-white text-slate-700 hover:text-slate-900 border border-slate-200 shadow-sm transition-colors"
+            title="Refresh Report"
           >
             <FiRefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
