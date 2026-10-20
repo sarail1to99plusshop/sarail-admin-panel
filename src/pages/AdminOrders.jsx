@@ -15,6 +15,7 @@ import {
   FiX,
   FiCheck,
   FiPrinter,
+  FiTrash2,
 } from 'react-icons/fi';
 import { TbTruckDelivery } from 'react-icons/tb';
 import { generateOrderInvoicePDF } from '../utils/orderInvoicePDF';
@@ -24,6 +25,7 @@ import {
   updateOrderStatusAPI,
   updateOrderPaymentStatusAPI,
   markOrderViewedAPI,
+  deleteAdminOrderAPI,
 } from '../services/api';
 
 const STATUS_TABS = [
@@ -47,6 +49,8 @@ const AdminOrders = () => {
   const [statusUpdatingInvoice, setStatusUpdatingInvoice] = useState('');
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
   const [bkashModalOrder, setBkashModalOrder] = useState(null);
+  const [orderToDelete, setOrderToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [feedback, setFeedback] = useState({ type: '', text: '' });
 
   const loadOrders = useCallback(async () => {
@@ -166,6 +170,33 @@ const AdminOrders = () => {
     }
   };
 
+  // Handle Delete Order Permanently
+  const confirmDeleteOrder = async () => {
+    if (!orderToDelete) return;
+    const invoice = orderToDelete.invoiceNumber;
+    setIsDeleting(true);
+    setFeedback({ type: '', text: '' });
+    try {
+      await deleteAdminOrderAPI(invoice);
+      setOrders((prev) => prev.filter((o) => o.invoiceNumber !== invoice));
+      if (selectedOrderDetails?.invoiceNumber === invoice) {
+        setSelectedOrderDetails(null);
+      }
+      setFeedback({
+        type: 'success',
+        text: `Order #${invoice} has been permanently deleted.`,
+      });
+      setOrderToDelete(null);
+    } catch (err) {
+      setFeedback({
+        type: 'error',
+        text: err.response?.data?.message || err.message || 'Failed to delete order.',
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* ---------------- PAGE HEADER ---------------- */}
@@ -262,7 +293,7 @@ const AdminOrders = () => {
                   <th className="py-3.5 px-4">Items & Total</th>
                   <th className="py-3.5 px-4">Payment Info</th>
                   <th className="py-3.5 px-4">Status & Dispatch to Steadfast</th>
-                  <th className="py-3.5 px-4 text-right">Details</th>
+                  <th className="py-3.5 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
@@ -420,15 +451,24 @@ const AdminOrders = () => {
                         </div>
                       </td>
 
-                      {/* Quick Details View Button */}
+                      {/* Actions: View Details & Delete */}
                       <td className="py-3.5 px-4 text-right">
-                        <button
-                          onClick={() => handleViewOrder(order)}
-                          className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white border border-slate-200 dark:border-slate-700/60 transition-colors"
-                          title="View Complete Order Details"
-                        >
-                          <FiEye className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => handleViewOrder(order)}
+                            className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white border border-slate-200 dark:border-slate-700/60 transition-colors"
+                            title="View Complete Order Details"
+                          >
+                            <FiEye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => setOrderToDelete(order)}
+                            className="p-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 border border-rose-200 transition-colors"
+                            title="Delete Order"
+                          >
+                            <FiTrash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -616,19 +656,30 @@ const AdminOrders = () => {
             </div>
 
             {/* Footer */}
-            <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
-              <button
-                onClick={() => generateOrderInvoicePDF(selectedOrderDetails)}
-                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm shadow-indigo-600/25 flex items-center gap-1.5 active:scale-95"
-                title="Download / Print Delivery Invoice PDF"
-              >
-                <FiPrinter className="w-3.5 h-3.5" />
-                <span>Download Invoice (PDF)</span>
-              </button>
+            <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => generateOrderInvoicePDF(selectedOrderDetails)}
+                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm shadow-indigo-600/25 flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                  title="Download / Print Delivery Invoice PDF"
+                >
+                  <FiPrinter className="w-3.5 h-3.5" />
+                  <span>Download Invoice (PDF)</span>
+                </button>
+
+                <button
+                  onClick={() => setOrderToDelete(selectedOrderDetails)}
+                  className="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 border border-rose-200 text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                  title="Delete this order permanently"
+                >
+                  <FiTrash2 className="w-3.5 h-3.5" />
+                  <span>Delete Order</span>
+                </button>
+              </div>
 
               <button
                 onClick={() => setSelectedOrderDetails(null)}
-                className="px-5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-colors"
+                className="px-5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-colors cursor-pointer"
               >
                 Close
               </button>
@@ -691,6 +742,88 @@ const AdminOrders = () => {
             >
               Cancel
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------- DELETE ORDER CONFIRMATION MODAL ---------------- */}
+      {orderToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl transition-all">
+            <div className="flex items-center gap-3 text-rose-600 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/60 flex items-center justify-center shrink-0">
+                <FiTrash2 className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+                  Delete Order
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                  #{orderToDelete.invoiceNumber}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 mb-4 leading-relaxed">
+              Are you sure you want to permanently delete order{' '}
+              <strong className="text-slate-900 dark:text-white font-bold">
+                #{orderToDelete.invoiceNumber}
+              </strong>
+              {orderToDelete.customerDetails?.name
+                ? ` for ${orderToDelete.customerDetails.name}`
+                : ''}
+              ? This action is irreversible and removes the order completely from the database.
+            </p>
+
+            <div className="bg-slate-50 dark:bg-slate-900/70 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs space-y-1.5 mb-5">
+              <div className="flex justify-between">
+                <span className="text-slate-500 dark:text-slate-400">Customer Phone:</span>
+                <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">
+                  {orderToDelete.customerDetails?.phone || 'N/A'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500 dark:text-slate-400">Total Amount:</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                  ৳{orderToDelete.totalAmount}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500 dark:text-slate-400">Status:</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200">
+                  {orderToDelete.orderStatus}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setOrderToDelete(null)}
+                className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={confirmDeleteOrder}
+                className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-md shadow-rose-600/30 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+              >
+                {isDeleting ? (
+                  <>
+                    <FiRefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <FiTrash2 className="w-3.5 h-3.5" />
+                    <span>Delete Permanently</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

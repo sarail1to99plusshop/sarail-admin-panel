@@ -197,6 +197,11 @@ export const markAllOrdersViewedAPI = async () => {
   return res.data;
 };
 
+export const deleteAdminOrderAPI = async (invoiceNumber) => {
+  const res = await api.delete(`/api/admin/orders/${encodeURIComponent(invoiceNumber)}`);
+  return res.data;
+};
+
 // ---------------------------------------------------------------------------
 // MONTHLY DELIVERED REPORT
 // ---------------------------------------------------------------------------
@@ -214,9 +219,11 @@ export const fetchMonthlyDeliveredReportAPI = async ({
 // REAL-TIME ORDER POLLING
 // ---------------------------------------------------------------------------
 export const pollRecentOrdersAPI = async (sinceTimestamp) => {
-  const res = await api.get('/api/admin/orders/poll', {
-    params: { since: sinceTimestamp },
-  });
+  const params = {};
+  if (sinceTimestamp) {
+    params.since = sinceTimestamp;
+  }
+  const res = await api.get('/api/admin/orders/poll', { params });
   return res.data;
 };
 
@@ -235,5 +242,24 @@ export const fetchAdminUserOrdersAPI = async (identifier) => {
   return res.data;
 };
 
+// ---------------------------------------------------------------------------
+// CATEGORY COLLECTION MANAGEMENT
+// ---------------------------------------------------------------------------
+export const fetchCategoriesAPI = async () => {
+  const res = await api.get('/api/categories');
+  return res.data;
+};
+
+export const createCategoryAPI = async ({ name, id } = {}) => {
+  const res = await api.post('/api/admin/categories', { name, id });
+  return res.data;
+};
+
+export const deleteCategoryAPI = async (id) => {
+  const res = await api.delete(`/api/admin/categories/${encodeURIComponent(id)}`);
+  return res.data;
+};
+
 export default api;
+
 

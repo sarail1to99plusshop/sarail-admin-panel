@@ -18,6 +18,7 @@ import {
   FiShield,
   FiCheckCircle,
   FiEye,
+  FiVideo,
 } from 'react-icons/fi';
 import {
   fetchAdminProductsAPI,
@@ -25,20 +26,23 @@ import {
   updateAdminProductAPI,
   updateAdminProductStockAPI,
   deleteAdminProductAPI,
+  fetchCategoriesAPI,
+  createCategoryAPI,
+  deleteCategoryAPI,
 } from '../services/api';
 
-const CATEGORIES = [
-  { id: 'kitchen', label: 'Kitchen & Dining (রান্নাঘর ও ডাইনিং)' },
-  { id: 'cleaning', label: 'Cleaning & Hygiene (পরিষ্কার-পরিচ্ছন্নতা)' },
-  { id: 'baby-kids', label: 'Baby & Kids (বাচ্চাদের যত্ন ও খেলনা)' },
-  { id: 'beauty', label: 'Beauty & Personal Care (সৌন্দর্য ও প্রসাধন)' },
-  { id: 'melamine-crockery', label: 'Melamine & Crockery (মেলামাইন ও ক্রোকারিজ)' },
-  { id: 'toys', label: 'Toys & Games (খেলনা ও গেমস)' },
-  { id: 'home-household', label: 'Home & Household (গৃহস্থালি সামগ্রী)' },
-  { id: 'womens-fashion', label: "Women's Fashion (মহিলাদের ফ্যাশন ও গহনা)" },
-  { id: 'Personal Care & Accessories', label: 'Personal Care & Accessories' },
-  { id: 'Cookware & Dinnerware', label: 'Cookware & Dinnerware' },
-  { id: 'General', label: 'General / Others' },
+const DEFAULT_CATEGORIES = [
+  { id: 'kitchen', name: 'Kitchen & Dining (রান্নাঘর ও ডাইনিং)', label: 'Kitchen & Dining (রান্নাঘর ও ডাইনিং)' },
+  { id: 'cleaning', name: 'Cleaning & Hygiene (পরিষ্কার-পরিচ্ছন্নতা)', label: 'Cleaning & Hygiene (পরিষ্কার-পরিচ্ছন্নতা)' },
+  { id: 'baby-kids', name: 'Baby & Kids (বাচ্চাদের যত্ন ও খেলনা)', label: 'Baby & Kids (বাচ্চাদের যত্ন ও খেলনা)' },
+  { id: 'beauty', name: 'Beauty & Personal Care (সৌন্দর্য ও প্রসাধন)', label: 'Beauty & Personal Care (সৌন্দর্য ও প্রসাধন)' },
+  { id: 'melamine-crockery', name: 'Melamine & Crockery (মেলামাইন ও ক্রোকারিজ)', label: 'Melamine & Crockery (মেলামাইন ও ক্রোকারিজ)' },
+  { id: 'toys', name: 'Toys & Games (খেলনা ও গেমস)', label: 'Toys & Games (খেলনা ও গেমস)' },
+  { id: 'home-household', name: 'Home & Household (গৃহস্থালি সামগ্রী)', label: 'Home & Household (গৃহস্থালি সামগ্রী)' },
+  { id: 'womens-fashion', name: "Women's Fashion (মহিলাদের ফ্যাশন ও গহনা)", label: "Women's Fashion (মহিলাদের ফ্যাশন ও গহনা)" },
+  { id: 'Personal Care & Accessories', name: 'Personal Care & Accessories', label: 'Personal Care & Accessories' },
+  { id: 'Cookware & Dinnerware', name: 'Cookware & Dinnerware', label: 'Cookware & Dinnerware' },
+  { id: 'General', name: 'General / Others', label: 'General / Others' },
 ];
 
 const PRESET_TAGS = [
@@ -60,6 +64,7 @@ const emptyProductForm = {
   category: 'kitchen',
   stock: 50,
   thumbnail: '',
+  videoUrl: '',
   description: '',
   warranty: '12 Months Replacement',
   sku: '',
@@ -149,6 +154,108 @@ const AdminProducts = () => {
   const [editingStockId, setEditingStockId] = useState(null);
   const [tempStockValue, setTempStockValue] = useState('');
 
+  // Category Collection state (dynamically fetched from MongoDB)
+  const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [savingCategory, setSavingCategory] = useState(false);
+  const [categoryError, setCategoryError] = useState('');
+
+  const loadCategories = useCallback(async () => {
+    try {
+      setCategoriesLoading(true);
+      const res = await fetchCategoriesAPI();
+      if (res?.categories && Array.isArray(res.categories) && res.categories.length > 0) {
+        const formatted = res.categories.map((c) => ({
+          id: c.id,
+          name: c.name || c.label || c.id,
+          label: c.name || c.label || c.id,
+        }));
+        setCategories(formatted);
+      }
+    } catch (err) {
+      console.warn('Could not fetch categories from DB:', err);
+    } finally {
+      setCategoriesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadCategories();
+  }, [loadCategories]);
+
+  // Handle Add Category to MongoDB Collection
+  const handleAddCategory = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!newCategoryName.trim()) {
+      setCategoryError('Category name is required.');
+      return;
+    }
+
+    setSavingCategory(true);
+    setCategoryError('');
+    try {
+      const res = await createCategoryAPI({
+        name: newCategoryName.trim(),
+      });
+
+      if (res?.category) {
+        const added = {
+          id: res.category.id,
+          name: res.category.name,
+          label: res.category.name,
+        };
+
+        setCategories((prev) => {
+          const exists = prev.some((c) => c.id === added.id);
+          return exists ? prev : [...prev, added];
+        });
+
+        // Automatically select the new category in active product form
+        setFormData((prev) => ({
+          ...prev,
+          category: added.id,
+        }));
+
+        setFeedback({
+          type: 'success',
+          message: `Category "${added.name}" added to database collection!`,
+        });
+
+        setNewCategoryName('');
+        setCategoryModalOpen(false);
+      }
+    } catch (err) {
+      setCategoryError(err.message || 'Failed to create category.');
+    } finally {
+      setSavingCategory(false);
+    }
+  };
+
+  // Handle Delete Category from MongoDB Collection
+  const handleDeleteCategory = async (catId, catName) => {
+    if (!window.confirm(`Are you sure you want to delete category "${catName || catId}" from the database?`)) {
+      return;
+    }
+    try {
+      await deleteCategoryAPI(catId);
+      setCategories((prev) => prev.filter((c) => c.id !== catId));
+      setFeedback({
+        type: 'success',
+        message: `Category "${catName || catId}" deleted successfully.`,
+      });
+      setFormData((prev) => {
+        if (prev.category === catId) {
+          return { ...prev, category: categories.find((c) => c.id !== catId)?.id || 'kitchen' };
+        }
+        return prev;
+      });
+    } catch (err) {
+      setCategoryError(err.message || 'Failed to delete category.');
+    }
+  };
+
   const loadProducts = useCallback(async () => {
     try {
       const data = await fetchAdminProductsAPI({
@@ -212,6 +319,7 @@ const AdminProducts = () => {
     setEditingProduct(null);
     setFormData({
       ...emptyProductForm,
+      category: categories[0]?.id || 'kitchen',
       variants: [
         {
           colorName: 'Standard',
@@ -249,9 +357,10 @@ const AdminProducts = () => {
       price: product.price !== undefined ? String(product.price) : '',
       oldPrice: product.oldPrice !== null && product.oldPrice !== undefined ? String(product.oldPrice) : '',
       discount: product.discount || '',
-      category: product.category || 'kitchen',
+      category: product.category || categories[0]?.id || 'kitchen',
       stock: product.stock !== undefined ? product.stock : 50,
       thumbnail: product.thumbnail || preparedVariants[0]?.images?.[0] || '',
+      videoUrl: product.videoUrl || '',
       description: product.description || '',
       warranty: product.warranty || '12 Months Replacement',
       sku: product.sku || '',
@@ -544,11 +653,12 @@ const AdminProducts = () => {
       price: Number(formData.price),
       oldPrice: formData.oldPrice ? Number(formData.oldPrice) : null,
       discount: formData.discount || '',
-      category: formData.category,
+      category: formData.category || categories[0]?.id || 'kitchen',
       stock: Math.max(0, parseInt(formData.stock, 10) || 0),
       tag: formData.tag || '',
       sku: formData.sku.trim(),
       warranty: formData.warranty || '12 Months Replacement',
+      videoUrl: (formData.videoUrl || '').trim(),
       description: formData.description || '',
       thumbnail: finalThumbnail,
       images: allImages.length > 0 ? allImages : [finalThumbnail],
@@ -628,13 +738,28 @@ const AdminProducts = () => {
           </p>
         </div>
 
-        <button
-          onClick={openAddModal}
-          className="self-start sm:self-auto bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-indigo-600/30 transition-all cursor-pointer"
-        >
-          <FiPlus className="w-4 h-4" />
-          <span>Add New Product</span>
-        </button>
+        <div className="flex items-center gap-2.5 self-start sm:self-auto">
+          <button
+            onClick={() => {
+              setCategoryError('');
+              setNewCategoryName('');
+              setCategoryModalOpen(true);
+            }}
+            className="bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 font-bold px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-2 shadow-sm transition-all cursor-pointer"
+            title="Manage or add categories in MongoDB"
+          >
+            <FiLayers className="w-4 h-4 text-indigo-600" />
+            <span>Manage Categories</span>
+          </button>
+
+          <button
+            onClick={openAddModal}
+            className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-indigo-600/30 transition-all cursor-pointer"
+          >
+            <FiPlus className="w-4 h-4" />
+            <span>Add New Product</span>
+          </button>
+        </div>
       </div>
 
       {/* ---------------- FEEDBACK BANNER ---------------- */}
@@ -687,9 +812,9 @@ const AdminProducts = () => {
             className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-indigo-500 focus:bg-white transition-colors"
           >
             <option value="all">All Categories</option>
-            {CATEGORIES.map((c) => (
+            {categories.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.label}
+                {c.name || c.label || c.id}
               </option>
             ))}
           </select>
@@ -802,6 +927,15 @@ const AdminProducts = () => {
                                   )}
                                 </div>
                               )}
+                              {product.videoUrl && (
+                                <span
+                                  className="inline-flex items-center gap-1 text-[9px] font-bold text-rose-600 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded ml-1"
+                                  title={`Showcase Video: ${product.videoUrl}`}
+                                >
+                                  <FiVideo className="w-2.5 h-2.5" />
+                                  Video
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -810,7 +944,7 @@ const AdminProducts = () => {
                       {/* Category & SKU */}
                       <td className="py-3.5 px-4">
                         <span className="text-slate-800 font-bold block truncate max-w-[180px]">
-                          {product.category}
+                          {categories.find((c) => c.id === product.category)?.name || product.category}
                         </span>
                         <span className="text-[10px] text-slate-500 font-mono">
                           {product.sku || `SAR-${product.id}`}
@@ -1022,20 +1156,48 @@ const AdminProducts = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Category *
-                    </label>
-                    <select
-                      value={formData.category}
-                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-indigo-500 focus:bg-white"
-                    >
-                      {CATEGORIES.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.label}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-bold text-slate-700">
+                        Category *
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCategoryError('');
+                          setNewCategoryName('');
+                          setCategoryModalOpen(true);
+                        }}
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 hover:text-indigo-800 transition-colors cursor-pointer"
+                      >
+                        <FiPlus className="w-3 h-3" />
+                        <span>Add Category</span>
+                      </button>
+                    </div>
+                    <div className="flex gap-1.5">
+                      <select
+                        value={formData.category}
+                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                        className="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-indigo-500 focus:bg-white"
+                      >
+                        {categories.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name || c.label || c.id}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCategoryError('');
+                          setNewCategoryName('');
+                          setCategoryModalOpen(true);
+                        }}
+                        title="Add more category to database collection"
+                        className="px-2.5 py-2 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-600 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                      >
+                        <FiPlus className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
 
                   <div>
@@ -1429,6 +1591,38 @@ const AdminProducts = () => {
                 />
               </div>
 
+              {/* SECTION: PRODUCT SHOWCASE VIDEO */}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-2 text-xs font-bold text-slate-800">
+                    <FiVideo className="w-4 h-4 text-rose-600" />
+                    Product Showcase Video (ভিডিও ডেমো লিঙ্ক)
+                  </label>
+                  {formData.videoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, videoUrl: '' }))}
+                      className="text-[11px] font-semibold text-slate-500 hover:text-rose-600 underline cursor-pointer"
+                    >
+                      Clear Link
+                    </button>
+                  )}
+                </div>
+                <div className="relative">
+                  <input
+                    type="url"
+                    value={formData.videoUrl}
+                    onChange={(e) => setFormData({ ...formData, videoUrl: e.target.value })}
+                    placeholder="e.g. https://www.youtube.com/watch?v=... or https://youtu.be/... or embed URL"
+                    className="w-full bg-white border border-slate-300 rounded-lg pl-9 pr-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 font-mono"
+                  />
+                  <FiVideo className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                </div>
+                <p className="text-[11px] text-slate-500 leading-relaxed">
+                  Paste a YouTube URL (watch, shorts, youtu.be, embed) or Vimeo link. Customers will see a red &quot;Watch video&quot; button on the product details page to watch this video.
+                </p>
+              </div>
+
               {/* SECTION 5: COLLECTIONS BADGES */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-2">
@@ -1588,6 +1782,155 @@ const AdminProducts = () => {
               >
                 {saving ? 'Deleting...' : 'Yes, Delete Permanently'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------- CATEGORY COLLECTION MANAGEMENT MODAL ---------------- */}
+      {categoryModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600">
+                  <FiLayers className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900 tracking-tight">
+                    Category Collection Management
+                  </h3>
+                  <p className="text-[11px] text-slate-500 font-medium">
+                    Add new categories to MongoDB database collection
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setCategoryModalOpen(false);
+                  setCategoryError('');
+                }}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <FiX className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Error Feedback */}
+            {categoryError && (
+              <div className="mt-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2">
+                <FiAlertTriangle className="w-4 h-4 shrink-0 text-rose-500" />
+                <span>{categoryError}</span>
+              </div>
+            )}
+
+            {/* Add Category Form */}
+            <form onSubmit={handleAddCategory} className="mt-4 space-y-3.5">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Category Name *
+                </label>
+                <input
+                  type="text"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder="e.g. Kitchen & Dining, মেলামাইন, Smart Gadgets"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white font-medium"
+                  required
+                />
+                <p className="text-[11px] text-slate-400 mt-1.5">
+                  Category ID will be generated automatically in MongoDB.
+                </p>
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCategoryModalOpen(false);
+                    setCategoryError('');
+                  }}
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Close
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingCategory || !newCategoryName.trim()}
+                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-600/30 disabled:opacity-50 transition-colors flex items-center gap-2 cursor-pointer"
+                >
+                  {savingCategory ? (
+                    <>
+                      <FiRefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Saving to DB...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FiPlus className="w-3.5 h-3.5" />
+                      <span>Add Category to Collection</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+
+            {/* List of Existing Categories in MongoDB */}
+            <div className="mt-5 pt-4 border-t border-slate-100">
+              <div className="flex items-center justify-between mb-2.5">
+                <span className="text-xs font-bold text-slate-700">
+                  Categories in Database ({categories.length})
+                </span>
+                {categoriesLoading && (
+                  <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                    <FiRefreshCw className="w-3 h-3 animate-spin" /> Syncing...
+                  </span>
+                )}
+              </div>
+
+              <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1 text-xs">
+                {categories.map((cat) => (
+                  <div
+                    key={cat.id}
+                    className="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 hover:bg-indigo-50/50 border border-slate-200/80 transition-colors"
+                  >
+                    <div className="min-w-0 pr-2">
+                      <p className="font-bold text-slate-800 truncate">
+                        {cat.name || cat.label || cat.id}
+                      </p>
+                      <p className="text-[10px] font-mono text-slate-400 truncate">
+                        ID: {cat.id}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData((prev) => ({ ...prev, category: cat.id }));
+                          setCategoryModalOpen(false);
+                          setFeedback({
+                            type: 'success',
+                            message: `Selected category: "${cat.name || cat.id}"`,
+                          });
+                        }}
+                        className="px-2 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-bold transition-colors cursor-pointer"
+                      >
+                        Select
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteCategory(cat.id, cat.name)}
+                        className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                        title="Delete category from database"
+                      >
+                        <FiTrash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>

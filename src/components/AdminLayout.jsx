@@ -44,33 +44,43 @@ const AdminLayout = () => {
   const [unreadCount, setUnreadCount] = useState(0);
 
   // Persistent tracking of invoices that have already triggered an alert
-  const alertedOrdersRef = useRef(() => {
+  const alertedOrdersRef = useRef(null);
+  if (alertedOrdersRef.current === null) {
     try {
-      const raw = localStorage.getItem('sarail_alerted_orders');
-      return raw ? new Set(JSON.parse(raw)) : new Set();
+      const raw = typeof window !== 'undefined' ? localStorage.getItem('sarail_alerted_orders') : null;
+      alertedOrdersRef.current = raw ? new Set(JSON.parse(raw)) : new Set();
     } catch {
-      return new Set();
+      alertedOrdersRef.current = new Set();
     }
-  });
+  }
 
   // Helper to persist alerted orders
   const markInvoiceAsAlerted = useCallback((invoiceNumber) => {
     if (!invoiceNumber) return;
     try {
-      const currentSet =
-        alertedOrdersRef.current instanceof Function
-          ? alertedOrdersRef.current()
-          : alertedOrdersRef.current;
-      currentSet.add(invoiceNumber);
-      alertedOrdersRef.current = currentSet;
-      const recent = Array.from(currentSet).slice(-200);
+      if (!alertedOrdersRef.current) {
+        alertedOrdersRef.current = new Set();
+      }
+      alertedOrdersRef.current.add(invoiceNumber);
+      const recent = Array.from(alertedOrdersRef.current).slice(-200);
       localStorage.setItem('sarail_alerted_orders', JSON.stringify(recent));
     } catch {
       // ignore
     }
   }, []);
 
-  const lastCheckedRef = useRef(new Date().toISOString());
+  const lastCheckedRef = useRef(null);
+
+  // Sound toggle handler with audio test preview
+  const handleToggleSound = useCallback(() => {
+    setSoundEnabled((prev) => {
+      const next = !prev;
+      if (next) {
+        playNewOrderChime();
+      }
+      return next;
+    });
+  }, []);
 
   // 1. Fetch system database status
   const checkDatabaseStatus = useCallback(async () => {
@@ -108,22 +118,23 @@ const AdminLayout = () => {
     }
   }, []);
 
-  // 2. Real-time order poller (runs every 6 seconds)
+  // 2. Real-time order poller (runs immediately on mount and every 4.5 seconds)
   useEffect(() => {
     let isCancelled = false;
 
-    const pollInterval = setInterval(async () => {
+    const poll = async () => {
       try {
         const since = lastCheckedRef.current;
         const res = await pollRecentOrdersAPI(since);
 
         if (isCancelled) return;
 
+        if (res?.unviewedCount !== undefined) {
+          setUnreadCount(res.unviewedCount);
+        }
+
         if (res?.orders && Array.isArray(res.orders) && res.orders.length > 0) {
-          const alertedSet =
-            alertedOrdersRef.current instanceof Function
-              ? alertedOrdersRef.current()
-              : alertedOrdersRef.current;
+          const alertedSet = alertedOrdersRef.current || new Set();
 
           // Filter ONLY orders that have NOT been alerted before AND have not been marked as viewed
           const genuinelyNew = res.orders.filter(
@@ -137,7 +148,6 @@ const AdminLayout = () => {
 
             const newestOrder = genuinelyNew[0];
             setNewOrderAlert(newestOrder);
-            setUnreadCount((prev) => prev + genuinelyNew.length);
 
             // Audio Alert chime
             if (soundEnabled) {
@@ -149,14 +159,20 @@ const AdminLayout = () => {
               title: `New Order #${newestOrder.invoiceNumber}!`,
               body: `Total: ৳${newestOrder.totalAmount} by ${newestOrder.customerDetails?.name || 'Customer'}. Click to view details.`,
               tag: newestOrder.invoiceNumber,
+              invoiceNumber: newestOrder.invoiceNumber,
+              totalAmount: newestOrder.totalAmount,
+              customerDetails: newestOrder.customerDetails,
             });
           }
         }
-        lastCheckedRef.current = new Date().toISOString();
+        lastCheckedRef.current = res?.serverTime || new Date().toISOString();
       } catch (err) {
         console.error('Order polling error:', err);
       }
-    }, 6000);
+    };
+
+    poll();
+    const pollInterval = setInterval(poll, 4500);
 
     return () => {
       isCancelled = true;
@@ -226,9 +242,9 @@ const AdminLayout = () => {
 
           {/* Sound Toggle */}
           <button
-            onClick={() => setSoundEnabled(!soundEnabled)}
-            className="p-2 rounded-lg bg-slate-100 text-slate-700 hover:text-slate-900"
-            title={soundEnabled ? 'Mute Chime' : 'Enable Chime'}
+            onClick={handleToggleSound}
+            className="p-2 rounded-lg bg-slate-100 text-slate-700 hover:text-slate-900 transition-colors"
+            title={soundEnabled ? 'Chime sound is ON (click to mute)' : 'Chime sound is OFF (click to enable & test)'}
           >
             {soundEnabled ? (
               <FiVolume2 className="w-4 h-4 text-emerald-600" />
@@ -434,9 +450,9 @@ const AdminLayout = () => {
 
             {/* Sound Toggle */}
             <button
-              onClick={() => setSoundEnabled(!soundEnabled)}
+              onClick={handleToggleSound}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-xs font-bold text-slate-700 transition-colors"
-              title={soundEnabled ? 'Chime sound is active' : 'Chime sound is muted'}
+              title={soundEnabled ? 'Chime sound is ON (click to mute)' : 'Chime sound is OFF (click to enable & test)'}
             >
               {soundEnabled ? (
                 <>
