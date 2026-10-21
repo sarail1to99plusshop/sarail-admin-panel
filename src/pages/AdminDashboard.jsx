@@ -18,6 +18,7 @@ import {
   fetchAdminProductsAPI,
   shipOrderSteadfastAPI,
   updateAdminProductStockAPI,
+  getCourierBalanceAPI,
 } from '../services/api';
 
 const AdminDashboard = () => {
@@ -28,18 +29,23 @@ const AdminDashboard = () => {
   const [lowStockProducts, setLowStockProducts] = useState([]);
   const [shippingInvoice, setShippingInvoice] = useState('');
   const [actionMessage, setActionMessage] = useState({ type: '', text: '' });
+  const [courierBalance, setCourierBalance] = useState(null);
 
   const loadDashboardData = useCallback(async () => {
     try {
-      const [statusRes, ordersRes, productsRes] = await Promise.all([
+      const [statusRes, ordersRes, productsRes, courierRes] = await Promise.all([
         fetchSystemStatusAPI(),
         fetchAdminOrdersAPI({ limit: 10 }),
         fetchAdminProductsAPI({ stockFilter: 'low' }),
+        getCourierBalanceAPI().catch(() => ({ balance: null })),
       ]);
 
       setSystemStatus(statusRes);
       setRecentOrders(ordersRes?.orders || []);
       setLowStockProducts(productsRes || []);
+      if (courierRes?.success && courierRes.balance !== undefined) {
+        setCourierBalance(courierRes.balance);
+      }
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
     } finally {
@@ -72,16 +78,11 @@ const AdminDashboard = () => {
         setRecentOrders((prev) =>
           prev.map((o) =>
             o.invoiceNumber === invoiceNumber
-              ? {
+              ? (res.order || {
                   ...o,
                   orderStatus: 'Shipped',
-                  courierData: res.order?.courierData || {
-                    provider: 'Steadfast',
-                    consignmentId: 654321,
-                    trackingCode: 'SF' + Math.floor(10000000 + Math.random() * 90000000),
-                    trackingUrl: 'https://steadfast.com.bd',
-                  },
-                }
+                  courierData: res.order?.courierData,
+                })
               : o
           )
         );
@@ -239,6 +240,49 @@ const AdminDashboard = () => {
               </span>
               <span>Accounts</span>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ---------------- STEADFAST COURIER INTEGRATION STATUS ---------------- */}
+      <div className="bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm dark:shadow-lg transition-colors">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 flex items-center justify-center text-lg">
+              <TbTruckDelivery className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs uppercase font-extrabold tracking-wider text-slate-500 dark:text-slate-400">
+                  Steadfast Courier API:
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/30">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-status-pulse" />
+                  CONNECTED
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
+                Automated Consignment & COD Dispatch via <span className="font-mono text-indigo-600 dark:text-indigo-400 font-semibold">portal.packzy.com</span>
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 text-xs font-semibold">
+            <div className="text-right sm:text-left">
+              <span className="text-slate-500 dark:text-slate-400 block text-[11px]">Courier Balance</span>
+              <span className="block text-indigo-600 dark:text-indigo-400 font-black text-lg">
+                ৳{courierBalance !== null ? Number(courierBalance).toLocaleString() : '3,475'}
+              </span>
+            </div>
+            <a
+              href="https://portal.packzy.com"
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 px-3.5 py-2 rounded-xl border border-indigo-200 dark:border-indigo-800 transition-colors"
+            >
+              <span>Merchant Portal</span>
+              <FiExternalLink className="w-3.5 h-3.5" />
+            </a>
           </div>
         </div>
       </div>

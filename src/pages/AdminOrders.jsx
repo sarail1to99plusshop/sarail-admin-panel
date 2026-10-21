@@ -16,6 +16,7 @@ import {
   FiCheck,
   FiPrinter,
   FiTrash2,
+  FiMail,
 } from 'react-icons/fi';
 import { TbTruckDelivery } from 'react-icons/tb';
 import { generateOrderInvoicePDF } from '../utils/orderInvoicePDF';
@@ -26,6 +27,7 @@ import {
   updateOrderPaymentStatusAPI,
   markOrderViewedAPI,
   deleteAdminOrderAPI,
+  sendOrderInvoiceEmailAPI,
 } from '../services/api';
 
 const STATUS_TABS = [
@@ -51,6 +53,7 @@ const AdminOrders = () => {
   const [bkashModalOrder, setBkashModalOrder] = useState(null);
   const [orderToDelete, setOrderToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [sendingEmailInvoice, setSendingEmailInvoice] = useState(false);
   const [feedback, setFeedback] = useState({ type: '', text: '' });
 
   const loadOrders = useCallback(async () => {
@@ -94,9 +97,13 @@ const AdminOrders = () => {
     try {
       const res = await shipOrderSteadfastAPI(invoiceNumber);
       if (res?.success) {
+        const customerEmail = res.order?.customerDetails?.email || res.order?.email;
+        const emailNote = customerEmail
+          ? ` & invoice email dispatched to ${customerEmail}`
+          : '';
         setFeedback({
           type: 'success',
-          text: `Order #${invoiceNumber} handed over to Steadfast Courier! Status is now Shipped.`,
+          text: `Order #${invoiceNumber} handed over to Steadfast Courier! Status is now Shipped${emailNote}.`,
         });
 
         // Update local order state
@@ -124,9 +131,14 @@ const AdminOrders = () => {
     try {
       const res = await updateOrderStatusAPI(invoiceNumber, newStatus);
       if (res?.success) {
+        const customerEmail = res.order?.customerDetails?.email || res.order?.email;
+        const emailNote =
+          customerEmail && (newStatus === 'Shipped' || newStatus === 'Delivered' || newStatus === 'Cancelled')
+            ? ` & email notification dispatched to ${customerEmail}`
+            : '';
         setFeedback({
           type: 'success',
-          text: `Order #${invoiceNumber} status updated to "${newStatus}".`,
+          text: `Order #${invoiceNumber} status updated to "${newStatus}"${emailNote}.`,
         });
         setOrders((prev) =>
           prev.map((o) => (o.invoiceNumber === invoiceNumber ? res.order : o))
@@ -194,6 +206,44 @@ const AdminOrders = () => {
       });
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  // Handle Manual Send Email Invoice
+  const handleSendEmailInvoice = async (order) => {
+    if (!order) return;
+    const email = (order.customerDetails?.email || order.email || '').trim();
+    if (!email) {
+      setFeedback({
+        type: 'error',
+        text: `Cannot send email: Order #${order.invoiceNumber} has no customer email address on file.`,
+      });
+      return;
+    }
+    setSendingEmailInvoice(true);
+    setFeedback({ type: '', text: '' });
+    try {
+      const res = await sendOrderInvoiceEmailAPI(order.invoiceNumber, {
+        statusType: order.orderStatus || 'Shipped',
+      });
+      if (res?.success) {
+        setFeedback({
+          type: 'success',
+          text: `Professional invoice email successfully sent to ${email} (Status: ${order.orderStatus})!`,
+        });
+      } else {
+        setFeedback({
+          type: 'error',
+          text: res?.message || 'Failed to dispatch email invoice.',
+        });
+      }
+    } catch (err) {
+      setFeedback({
+        type: 'error',
+        text: err.response?.data?.message || err.message || 'Failed to send email invoice.',
+      });
+    } finally {
+      setSendingEmailInvoice(false);
     }
   };
 
@@ -300,6 +350,7 @@ const AdminOrders = () => {
                 {orders.map((order) => {
                   const isShipped = order.orderStatus === 'Shipped';
                   const isDelivered = order.orderStatus === 'Delivered';
+                  const isPartiallyDelivered = order.orderStatus === 'Partially Delivered';
                   const isCancelled = order.orderStatus === 'Cancelled';
                   const isPending = order.orderStatus === 'Pending' || order.orderStatus === 'Processing';
                   const isShippingThis = shippingInvoice === order.invoiceNumber;
@@ -334,9 +385,14 @@ const AdminOrders = () => {
                           <span className="text-[11px] text-indigo-600 dark:text-indigo-400 block font-mono">
                             {order.customerDetails?.phone}
                           </span>
-                          <span className="text-[10px] text-slate-500 dark:text-slate-400 block truncate">
-                            {order.customerDetails?.address}
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400 block truncate" title={order.customerDetails?.fullAddress || order.customerDetails?.address}>
+                            {order.customerDetails?.fullAddress || order.customerDetails?.address}
                           </span>
+                          {order.customerDetails?.district && (
+                            <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded text-[9px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                              {order.customerDetails?.thana ? `${order.customerDetails.thana}, ` : ''}{order.customerDetails.district}
+                            </span>
+                          )}
                         </div>
                       </td>
 
@@ -401,6 +457,8 @@ const AdminOrders = () => {
                               className={`rounded-lg px-2.5 py-1 text-xs font-bold border focus:outline-none ${
                                 isDelivered
                                   ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-300'
+                                  : isPartiallyDelivered
+                                  ? 'bg-purple-50 dark:bg-purple-950/60 border-purple-300 dark:border-purple-500/40 text-purple-800 dark:text-purple-300'
                                   : isShipped
                                   ? 'bg-indigo-50 dark:bg-indigo-950/60 border-indigo-300 dark:border-indigo-500/40 text-indigo-800 dark:text-indigo-300'
                                   : isCancelled
@@ -412,6 +470,7 @@ const AdminOrders = () => {
                               <option value="Processing">Processing</option>
                               <option value="Shipped">Shipped</option>
                               <option value="Delivered">Delivered</option>
+                              <option value="Partially Delivered">Partially Delivered</option>
                               <option value="Cancelled">Cancelled</option>
                             </select>
                           </div>
@@ -432,20 +491,27 @@ const AdminOrders = () => {
 
                           {/* Shipped with Steadfast tracking */}
                           {isShipped && (
-                            <div className="flex items-center gap-1.5 text-[11px]">
-                              <span className="text-slate-500 dark:text-slate-400">Steadfast:</span>
-                              <a
-                                href={
-                                  order.courierData?.trackingUrl ||
-                                  `https://steadfast.com.bd/t/${order.courierData?.trackingCode}`
-                                }
-                                target="_blank"
-                                rel="noreferrer"
-                                className="font-mono font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
-                              >
-                                <span>{order.courierData?.trackingCode || 'Track'}</span>
-                                <FiExternalLink className="w-3 h-3" />
-                              </a>
+                            <div className="flex flex-col gap-0.5 text-[11px]">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-slate-500 dark:text-slate-400">Steadfast:</span>
+                                <a
+                                  href={
+                                    order.courierData?.trackingUrl ||
+                                    `https://steadfast.com.bd/t/${order.courierData?.trackingCode}`
+                                  }
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="font-mono font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+                                >
+                                  <span>{order.courierData?.trackingCode || 'Track'}</span>
+                                  <FiExternalLink className="w-3 h-3" />
+                                </a>
+                              </div>
+                              {order.courierData?.codAmount !== undefined && (
+                                <span className="text-[10px] text-slate-500 font-medium">
+                                  COD: <strong className="text-slate-800 dark:text-slate-200">৳{order.courierData.codAmount}</strong>
+                                </span>
+                              )}
                             </div>
                           )}
                         </div>
@@ -522,11 +588,38 @@ const AdminOrders = () => {
                       {selectedOrderDetails.customerDetails?.phone}
                     </span>
                   </div>
-                  <div className="sm:col-span-2">
-                    <span className="text-slate-500 dark:text-slate-400 block">Address:</span>
-                    <span className="text-slate-700 dark:text-slate-200">
-                      {selectedOrderDetails.customerDetails?.address}
+                  <div>
+                    <span className="text-slate-500 dark:text-slate-400 block">Customer Email:</span>
+                    <span className="text-slate-900 dark:text-white font-semibold font-mono">
+                      {selectedOrderDetails.customerDetails?.email || selectedOrderDetails.email || (
+                        <span className="text-slate-400 font-normal italic">Not provided</span>
+                      )}
                     </span>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <span className="text-slate-500 dark:text-slate-400 block text-xs">Delivery Address:</span>
+                    <span className="text-slate-800 dark:text-slate-100 font-semibold block text-sm mt-0.5">
+                      {selectedOrderDetails.customerDetails?.fullAddress || selectedOrderDetails.customerDetails?.address}
+                    </span>
+                    {(selectedOrderDetails.customerDetails?.district || selectedOrderDetails.customerDetails?.thana) && (
+                      <div className="mt-1.5 flex flex-wrap gap-1.5 text-[11px]">
+                        {selectedOrderDetails.customerDetails?.district && (
+                          <span className="bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-900/40">
+                            District: <strong>{selectedOrderDetails.customerDetails.district}</strong>
+                          </span>
+                        )}
+                        {selectedOrderDetails.customerDetails?.thana && (
+                          <span className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                            Thana: <strong>{selectedOrderDetails.customerDetails.thana}</strong>
+                          </span>
+                        )}
+                        {selectedOrderDetails.customerDetails?.streetAddress && (
+                          <span className="bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-900/40">
+                            Street/Village: <strong>{selectedOrderDetails.customerDetails.streetAddress}</strong>
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                   {selectedOrderDetails.customerDetails?.note && (
                     <div className="sm:col-span-2">
@@ -574,6 +667,14 @@ const AdminOrders = () => {
                     <span className="text-slate-500 dark:text-slate-400 block">Tracking Code:</span>
                     <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
                       {selectedOrderDetails.courierData?.trackingCode || 'Pending'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 dark:text-slate-400 block">COD to Collect:</span>
+                    <span className="font-bold text-slate-900 dark:text-white">
+                      ৳{selectedOrderDetails.courierData?.codAmount !== undefined
+                        ? selectedOrderDetails.courierData.codAmount
+                        : (selectedOrderDetails.paymentMethod === 'COD' ? selectedOrderDetails.totalAmount : 0)}
                     </span>
                   </div>
                   <div>
@@ -665,6 +766,16 @@ const AdminOrders = () => {
                 >
                   <FiPrinter className="w-3.5 h-3.5" />
                   <span>Download Invoice (PDF)</span>
+                </button>
+
+                <button
+                  onClick={() => handleSendEmailInvoice(selectedOrderDetails)}
+                  disabled={sendingEmailInvoice}
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold transition-all shadow-sm shadow-blue-600/25 flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                  title="Send or resend invoice email to customer"
+                >
+                  <FiMail className="w-3.5 h-3.5" />
+                  <span>{sendingEmailInvoice ? 'Sending...' : 'Email Invoice'}</span>
                 </button>
 
                 <button

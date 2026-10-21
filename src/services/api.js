@@ -157,12 +157,24 @@ export const fetchAdminOrdersAPI = async ({
 
 export const shipOrderSteadfastAPI = async (
   invoiceNumber,
-  { consignmentId, trackingCode, note } = {}
+  { consignmentId, trackingCode, codAmount, note, forceReship } = {}
 ) => {
   const res = await api.post(
     `/api/admin/orders/${encodeURIComponent(invoiceNumber)}/ship-steadfast`,
-    { consignmentId, trackingCode, note }
+    { consignmentId, trackingCode, codAmount, note, forceReship }
   );
+  return res.data;
+};
+
+export const getCourierStatusAPI = async (invoiceNumber) => {
+  const res = await api.get(
+    `/api/admin/orders/${encodeURIComponent(invoiceNumber)}/courier-status`
+  );
+  return res.data;
+};
+
+export const getCourierBalanceAPI = async () => {
+  const res = await api.get('/api/admin/courier/balance');
   return res.data;
 };
 
@@ -199,6 +211,47 @@ export const markAllOrdersViewedAPI = async () => {
 
 export const deleteAdminOrderAPI = async (invoiceNumber) => {
   const res = await api.delete(`/api/admin/orders/${encodeURIComponent(invoiceNumber)}`);
+  return res.data;
+};
+
+export const sendOrderInvoiceEmailAPI = async (invoiceNumber, { statusType } = {}) => {
+  const res = await api.post(
+    `/api/admin/orders/${encodeURIComponent(invoiceNumber)}/send-email`,
+    { statusType }
+  );
+  return res.data;
+};
+
+export const testEmailConfigAPI = async () => {
+  const res = await api.get('/api/admin/test-email');
+  return res.data;
+};
+
+// ---------------------------------------------------------------------------
+// DELIVERY CHARGES & LOCATION ZONES MANAGEMENT (Inside / Outside Dhaka)
+// ---------------------------------------------------------------------------
+export const fetchAdminDeliveryChargesAPI = async () => {
+  const res = await api.get('/api/admin/delivery-charges');
+  return res.data;
+};
+
+export const createAdminDeliveryChargeAPI = async (zoneData) => {
+  const res = await api.post('/api/admin/delivery-charges', zoneData);
+  return res.data;
+};
+
+export const updateAdminDeliveryChargeAPI = async (id, zoneData) => {
+  const res = await api.patch(
+    `/api/admin/delivery-charges/${encodeURIComponent(id)}`,
+    zoneData
+  );
+  return res.data;
+};
+
+export const deleteAdminDeliveryChargeAPI = async (id) => {
+  const res = await api.delete(
+    `/api/admin/delivery-charges/${encodeURIComponent(id)}`
+  );
   return res.data;
 };
 

@@ -193,6 +193,7 @@ const AdminLayout = () => {
     { label: 'Dashboard Overview', path: '/', icon: FiGrid },
     { label: 'Manage Products & Stock', path: '/products', icon: FiBox },
     { label: 'Customer Orders', path: '/orders', icon: FiShoppingBag },
+    { label: 'Delivery & Locations', path: '/delivery', icon: TbTruckDelivery },
     { label: 'Customer Accounts', path: '/users', icon: FiUsers },
     { label: 'Delivered Reports', path: '/reports', icon: FiBarChart2 },
   ];
