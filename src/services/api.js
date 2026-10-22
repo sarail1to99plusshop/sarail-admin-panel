@@ -313,6 +313,14 @@ export const deleteCategoryAPI = async (id) => {
   return res.data;
 };
 
+// ---------------------------------------------------------------------------
+// IMGBB IMAGE UPLOAD PROXY (BACKEND FALLBACK)
+// ---------------------------------------------------------------------------
+export const uploadImageToBackendAPI = async ({ image, name }) => {
+  const res = await api.post('/api/admin/upload-image', { image, name });
+  return res.data;
+};
+
 export default api;
 
 
