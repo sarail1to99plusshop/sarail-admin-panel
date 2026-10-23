@@ -10,8 +10,10 @@ import {
   FiExternalLink,
   FiArrowRight,
   FiDatabase,
+  FiInbox,
+  FiPhone,
 } from 'react-icons/fi';
-import { TbTruckDelivery } from 'react-icons/tb';
+import { TbTruckDelivery, TbBrandWhatsapp } from 'react-icons/tb';
 import {
   fetchSystemStatusAPI,
   fetchAdminOrdersAPI,
@@ -19,6 +21,8 @@ import {
   shipOrderSteadfastAPI,
   updateAdminProductStockAPI,
   getCourierBalanceAPI,
+  fetchAdminPreOrdersAPI,
+  updateAdminPreOrderStatusAPI,
 } from '../services/api';
 
 const AdminDashboard = () => {
@@ -26,23 +30,27 @@ const AdminDashboard = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [systemStatus, setSystemStatus] = useState(null);
   const [recentOrders, setRecentOrders] = useState([]);
+  const [recentPreOrders, setRecentPreOrders] = useState([]);
   const [lowStockProducts, setLowStockProducts] = useState([]);
   const [shippingInvoice, setShippingInvoice] = useState('');
+  const [updatingPreOrderId, setUpdatingPreOrderId] = useState(null);
   const [actionMessage, setActionMessage] = useState({ type: '', text: '' });
   const [courierBalance, setCourierBalance] = useState(null);
 
   const loadDashboardData = useCallback(async () => {
     try {
-      const [statusRes, ordersRes, productsRes, courierRes] = await Promise.all([
+      const [statusRes, ordersRes, productsRes, courierRes, preOrdersRes] = await Promise.all([
         fetchSystemStatusAPI(),
         fetchAdminOrdersAPI({ limit: 10 }),
         fetchAdminProductsAPI({ stockFilter: 'low' }),
         getCourierBalanceAPI().catch(() => ({ balance: null })),
+        fetchAdminPreOrdersAPI().catch(() => ({ preOrders: [] })),
       ]);
 
       setSystemStatus(statusRes);
       setRecentOrders(ordersRes?.orders || []);
       setLowStockProducts(productsRes || []);
+      setRecentPreOrders(preOrdersRes?.preOrders?.slice(0, 6) || []);
       if (courierRes?.success && courierRes.balance !== undefined) {
         setCourierBalance(courierRes.balance);
       }
@@ -53,6 +61,32 @@ const AdminDashboard = () => {
       setRefreshing(false);
     }
   }, []);
+
+  const handleUpdatePreOrderStatus = async (id, newStatus) => {
+    setUpdatingPreOrderId(id);
+    setActionMessage({ type: '', text: '' });
+    try {
+      const res = await updateAdminPreOrderStatusAPI(id, newStatus);
+      if (res?.success) {
+        setRecentPreOrders((prev) =>
+          prev.map((po) =>
+            (po._id === id || po.id === id) ? { ...po, status: newStatus } : po
+          )
+        );
+        setActionMessage({
+          type: 'success',
+          text: `Pre-order updated to "${newStatus}".`,
+        });
+      }
+    } catch (err) {
+      setActionMessage({
+        type: 'error',
+        text: err.message || 'Failed to update pre-order status.',
+      });
+    } finally {
+      setUpdatingPreOrderId(null);
+    }
+  };
 
   useEffect(() => {
     loadDashboardData();
@@ -287,8 +321,8 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* ---------------- 4 PRIMARY KPI CARDS ---------------- */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* ---------------- 5 PRIMARY KPI CARDS ---------------- */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Delivered Revenue */}
         <div className="bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm dark:shadow-lg relative overflow-hidden transition-colors">
           <div className="flex items-center justify-between">
@@ -348,6 +382,29 @@ const AdminDashboard = () => {
             </p>
           </div>
         </div>
+
+        {/* Pre-Orders & Custom */}
+        <Link
+          to="/pre-orders"
+          className="bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-800 hover:border-indigo-500 rounded-2xl p-5 shadow-sm dark:shadow-lg relative overflow-hidden transition-all group block cursor-pointer"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+              Pre-Orders & Custom
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+              <FiInbox className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <h3 className="text-2xl font-black text-slate-900 dark:text-white">
+              {stats.preOrdersCount ?? recentPreOrders.length}
+            </h3>
+            <p className="text-[11px] text-purple-600 dark:text-purple-400 font-bold mt-1">
+              {stats.pendingPreOrdersCount ?? recentPreOrders.filter((p) => p.status === 'Pending').length} Pending response
+            </p>
+          </div>
+        </Link>
 
         {/* Low Stock Alert */}
         <div className="bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm dark:shadow-lg relative overflow-hidden transition-colors">
@@ -506,6 +563,181 @@ const AdminDashboard = () => {
                             <span>Delivery Completed</span>
                           </span>
                         )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* ---------------- RECENT PRE-ORDERS & CUSTOM REQUESTS TABLE ---------------- */}
+      <div className="bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden transition-colors">
+        <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+              <FiInbox className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="font-extrabold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                <span>Recent Pre-Orders & Custom Inquiries</span>
+                {recentPreOrders.filter((p) => p.status === 'Pending').length > 0 && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-300 dark:border-amber-500/30">
+                    {recentPreOrders.filter((p) => p.status === 'Pending').length} Pending
+                  </span>
+                )}
+              </h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Customer product sourcing requests and custom pre-orders
+              </p>
+            </div>
+          </div>
+
+          <Link
+            to="/pre-orders"
+            className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 font-bold flex items-center gap-1 shrink-0"
+          >
+            <span>View All</span>
+            <FiArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        {recentPreOrders.length === 0 ? (
+          <div className="py-12 text-center space-y-2">
+            <FiInbox className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto" />
+            <p className="text-xs font-bold text-slate-600 dark:text-slate-400">
+              No customer pre-orders received yet
+            </p>
+            <p className="text-[11px] text-slate-400">
+              Pre-order submissions from the website will automatically show up here.
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs whitespace-nowrap">
+              <thead className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-800">
+                <tr>
+                  <th className="py-3 px-4 font-bold">Requested Product</th>
+                  <th className="py-3 px-4 font-bold">Customer</th>
+                  <th className="py-3 px-4 font-bold">Fast Contact</th>
+                  <th className="py-3 px-4 font-bold">Notes</th>
+                  <th className="py-3 px-4 font-bold">Date</th>
+                  <th className="py-3 px-4 font-bold">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
+                {recentPreOrders.map((po) => {
+                  const id = po._id || po.id;
+                  const isUpdating = updatingPreOrderId === id;
+                  const cleanPhone = (po.phone || '').replace(/\D/g, '');
+                  const whatsappPhone = cleanPhone.startsWith('880')
+                    ? cleanPhone
+                    : cleanPhone.startsWith('0')
+                    ? `88${cleanPhone}`
+                    : `880${cleanPhone}`;
+
+                  const statusColors = {
+                    Pending:
+                      'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-400 border-amber-300 dark:border-amber-500/30',
+                    Contacted:
+                      'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-400 border-blue-300 dark:border-blue-500/30',
+                    Fulfilled:
+                      'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400 border-emerald-300 dark:border-emerald-500/30',
+                    Cancelled:
+                      'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-400 border-rose-300 dark:border-rose-500/30',
+                  };
+
+                  return (
+                    <tr
+                      key={id}
+                      className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
+                    >
+                      <td className="py-3 px-4">
+                        <span className="font-extrabold text-slate-900 dark:text-white block">
+                          {po.productName}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          ID: {String(id).slice(-8)}
+                        </span>
+                      </td>
+
+                      <td className="py-3 px-4">
+                        <span className="font-bold text-slate-800 dark:text-slate-200 block">
+                          {po.customerName}
+                        </span>
+                        <span className="text-slate-500 dark:text-slate-400 text-[11px] font-mono">
+                          {po.phone}
+                        </span>
+                      </td>
+
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-1.5">
+                          {po.phone && (
+                            <>
+                              <a
+                                href={`tel:${po.phone}`}
+                                title={`Call ${po.customerName}`}
+                                className="px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-500/30 dark:text-emerald-400 font-bold text-[11px] flex items-center gap-1 transition-colors"
+                              >
+                                <FiPhone className="w-3 h-3" />
+                                <span>Call</span>
+                              </a>
+                              <a
+                                href={`https://wa.me/${whatsappPhone}?text=${encodeURIComponent(
+                                  `আসসালামু আলাইকুম ${po.customerName}, Sarail 1 to 99 Plus Shop থেকে আপনার প্রি-অর্ডার "${po.productName}" নিয়ে যোগাযোগ করছি।`
+                                )}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="Chat on WhatsApp"
+                                className="px-2 py-1 rounded-lg bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 dark:bg-green-950/40 dark:border-green-500/30 dark:text-green-400 font-bold text-[11px] flex items-center gap-1 transition-colors"
+                              >
+                                <TbBrandWhatsapp className="w-3.5 h-3.5 text-green-600" />
+                                <span>WhatsApp</span>
+                              </a>
+                            </>
+                          )}
+                        </div>
+                      </td>
+
+                      <td className="py-3 px-4 max-w-xs">
+                        {po.notes ? (
+                          <p
+                            className="truncate text-slate-600 dark:text-slate-300 text-xs"
+                            title={po.notes}
+                          >
+                            {po.notes}
+                          </p>
+                        ) : (
+                          <span className="text-slate-400 italic text-[11px]">—</span>
+                        )}
+                      </td>
+
+                      <td className="py-3 px-4 text-slate-500 dark:text-slate-400 text-[11px]">
+                        {po.createdAt
+                          ? new Date(po.createdAt).toLocaleDateString('en-GB', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric',
+                            })
+                          : '—'}
+                      </td>
+
+                      <td className="py-3 px-4">
+                        <select
+                          value={po.status || 'Pending'}
+                          disabled={isUpdating}
+                          onChange={(e) => handleUpdatePreOrderStatus(id, e.target.value)}
+                          className={`text-[11px] font-bold rounded-lg px-2.5 py-1 border outline-none cursor-pointer transition-all ${
+                            statusColors[po.status] || statusColors.Pending
+                          } ${isUpdating ? 'opacity-50 pointer-events-none' : ''}`}
+                        >
+                          <option value="Pending">Pending</option>
+                          <option value="Contacted">Contacted</option>
+                          <option value="Fulfilled">Fulfilled</option>
+                          <option value="Cancelled">Cancelled</option>
+                        </select>
                       </td>
                     </tr>
                   );

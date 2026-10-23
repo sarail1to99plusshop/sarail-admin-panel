@@ -321,6 +321,19 @@ export const uploadImageToBackendAPI = async ({ image, name }) => {
   return res.data;
 };
 
+// ---------------------------------------------------------------------------
+// PRE-ORDERS MANAGEMENT (ADMIN)
+// ---------------------------------------------------------------------------
+export const fetchAdminPreOrdersAPI = async () => {
+  const res = await api.get('/api/admin/pre-orders');
+  return res.data;
+};
+
+export const updateAdminPreOrderStatusAPI = async (id, status) => {
+  const res = await api.patch(`/api/admin/pre-orders/${encodeURIComponent(id)}`, { status });
+  return res.data;
+};
+
 export default api;
 
 

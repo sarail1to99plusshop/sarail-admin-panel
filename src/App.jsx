@@ -8,6 +8,7 @@ import AdminOrders from './pages/AdminOrders';
 import AdminUsers from './pages/AdminUsers';
 import AdminReports from './pages/AdminReports';
 import AdminDelivery from './pages/AdminDelivery';
+import AdminPreOrders from './pages/AdminPreOrders';
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
         <Route index element={<AdminDashboard />} />
         <Route path="products" element={<AdminProducts />} />
         <Route path="orders" element={<AdminOrders />} />
+        <Route path="pre-orders" element={<AdminPreOrders />} />
         <Route path="delivery" element={<AdminDelivery />} />
         <Route path="users" element={<AdminUsers />} />
         <Route path="reports" element={<AdminReports />} />
