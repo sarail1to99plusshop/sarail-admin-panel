@@ -1,0 +1,334 @@
+{
+  "success": true,
+  "products": [
+    {
+      "_id": "6aca4da7071d09eb16d529a7",
+      "id": 1,
+      "name": "ট্যাপ ওয়াটার ফিল্টার - 360° রোটেটিং কিচেন কল ফিল্টার",
+      "price": 150,
+      "oldPrice": 200,
+      "discount": "-25%",
+      "category": "kitchen",
+      "rating": 0,
+      "reviews": 0,
+      "tag": "Daily Essential",
+      "stock": 15,
+      "thumbnail": "https://i.ibb.co/KzjmL6Jt/image.webp",
+      "description": "সহজেই কিচেনের যেকোনো পানির কলে সেট করা যায়। পানি পরিষ্কার ও ব্যাকটেরিয়ামুক্ত রাখতে কার্যকর এবং পানির অপচয় রোধ করে।",
+      "warranty": "12 Months Replacement",
+      "sku": "",
+      "variants": [
+        {
+          "colorName": "Standard",
+          "colorCode": "#3B82F6",
+          "images": [
+            "https://i.ibb.co/KzjmL6Jt/image.webp"
+          ]
+        }
+      ],
+      "__v": 1,
+      "createdAt": "2026-10-10T14:37:27.160Z",
+      "updatedAt": "2026-10-24T18:42:00.208Z",
+      "collections": {
+        "bestSelling": true,
+        "newArrival": false,
+        "hotOffer": true,
+        "popular": true
+      },
+      "images": [
+        "https://i.ibb.co/KzjmL6Jt/image.webp"
+      ],
+      "videoUrl": ""
+    },
+    {
+      "_id": "6aca4da7071d09eb16d529a8",
+      "id": 2,
+      "name": "ফ্রিজ ম্যাট ৪ পিস সেট - অ্যান্টি-ব্যাকটেরিয়াল ও ওয়াশেবল",
+      "price": 180,
+      "oldPrice": 250,
+      "discount": "-28%",
+      "category": "kitchen",
+      "rating": 0,
+      "reviews": 0,
+      "tag": "Popular",
+      "stock": 34,
+      "thumbnail": "https://images.unsplash.com/photo-1583947215259-38e31be8751f?w=600&auto=format&fit=crop&q=80",
+      "description": "উন্নত মানের ওয়াটারপ্রুফ এবং ইজি-টু-ক্লিন ফ্রিজ ম্যাট সেট। ফ্রিজের তাকে দাগ ও ময়লা পড়া থেকে রক্ষা করে এবং পরিষ্কার রাখা সহজ করে।",
+      "warranty": "12 Months Replacement",
+      "sku": "",
+      "variants": [
+        {
+          "colorName": "White",
+          "colorCode": "#FFFFFF",
+          "images": [
+            "https://images.unsplash.com/photo-1583947215259-38e31be8751f?w=600&auto=format&fit=crop&q=80"
+          ]
+        }
+      ],
+      "__v": 1,
+      "createdAt": "2026-10-10T14:37:27.162Z",
+      "updatedAt": "2026-10-24T17:08:44.114Z",
+      "collections": {
+        "bestSelling": false,
+        "newArrival": false,
+        "hotOffer": false,
+        "popular": false
+      },
+      "images": [
+        "https://images.unsplash.com/photo-1583947215259-38e31be8751f?w=600&auto=format&fit=crop&q=80"
+      ],
+      "videoUrl": ""
+    },
+    {
+      "_id": "6aca4da7071d09eb16d529a9",
+      "id": 3,
+      "name": "হেভি ডিউটি কিচেন ক্লিনার স্প্রে - অয়েল ও গ্রীস রিমুভার",
+      "price": 280,
+      "oldPrice": 350,
+      "discount": "-20%",
+      "category": "cleaning",
+      "rating": 0,
+      "reviews": 0,
+      "tag": "Hot Deal",
+      "stock": 36,
+      "thumbnail": "https://images.unsplash.com/photo-1585421514284-efb74c2b69ba?w=600&auto=format&fit=crop&q=80",
+      "description": "রান্নাঘরের তেলচিটে ও জেদি ময়লা নিমিষেই পরিষ্কার করতে অত্যন্ত কার্যকরী পাওয়ারফুল ক্লিনার। চুলা, সিঙ্ক ও কিচেন টাইলসের জন্য উপযুক্ত।",
+      "warranty": "12 Months Replacement",
+      "sku": "",
+      "variants": [
+        {
+          "colorName": "Standard",
+          "colorCode": "#F59E0B",
+          "images": [
+            "https://images.unsplash.com/photo-1585421514284-efb74c2b69ba?w=600&auto=format&fit=crop&q=80"
+          ]
+        }
+      ],
+      "__v": 1,
+      "createdAt": "2026-10-10T14:37:27.163Z",
+      "updatedAt": "2026-10-24T17:08:44.114Z",
+      "collections": {
+        "bestSelling": false,
+        "newArrival": false,
+        "hotOffer": false,
+        "popular": false
+      },
+      "images": [
+        "https://images.unsplash.com/photo-1585421514284-efb74c2b69ba?w=600&auto=format&fit=crop&q=80"
+      ],
+      "videoUrl": ""
+    },
+    {
+      "_id": "6aca4da7071d09eb16d529aa",
+      "id": 4,
+      "name": "টয়লেট ফ্লাশ ক্লিনার ট্যাবলেট - ডিওডোরাইজার ও ডিসইনফেক্টেন্ট",
+      "price": 180,
+      "oldPrice": 240,
+      "discount": "-25%",
+      "category": "cleaning",
+      "rating": 0,
+      "reviews": 0,
+      "tag": "Best Seller",
+      "stock": 60,
+      "thumbnail": "https://images.unsplash.com/photo-1584813470613-5b1c1cad3d69?w=600&auto=format&fit=crop&q=80",
+      "description": "কমোডে সুগন্ধি ও দীর্ঘস্থায়ী পরিচ্ছন্নতা বজায় রাখে। প্রতিটি ফ্লাশে জীবাণু ধ্বংস করে এবং দুর্গন্ধ দূর করতে সাহায্য করে।",
+      "warranty": "12 Months Replacement",
+      "sku": "",
+      "variants": [
+        {
+          "colorName": "Blue",
+          "colorCode": "#2563EB",
+          "images": [
+            "https://images.unsplash.com/photo-1584813470613-5b1c1cad3d69?w=600&auto=format&fit=crop&q=80"
+          ]
+        }
+      ],
+      "__v": 1,
+      "createdAt": "2026-10-10T14:37:27.163Z",
+      "updatedAt": "2026-10-24T17:08:44.114Z",
+      "collections": {
+        "bestSelling": false,
+        "newArrival": false,
+        "hotOffer": false,
+        "popular": false
+      },
+      "images": [
+        "https://images.unsplash.com/photo-1584813470613-5b1c1cad3d69?w=600&auto=format&fit=crop&q=80"
+      ],
+      "videoUrl": ""
+    },
+    {
+      "_id": "6aca4da7071d09eb16d529ab",
+      "id": 5,
+      "name": "প্রিমিয়াম মেলামাইন জগ (২.২ লিটার রাউন্ড শেপ)",
+      "price": 320,
+      "oldPrice": 380,
+      "discount": "-16%",
+      "category": "kitchen",
+      "rating": 0,
+      "reviews": 0,
+      "tag": "Discount",
+      "stock": 25,
+      "thumbnail": "https://images.unsplash.com/photo-1517256064527-09c73fc73e38?w=600&auto=format&fit=crop&q=80",
+      "description": "টেকসই ও আকর্ষণীয় ডিজাইনের ২.২ লিটার ফুড-গ্রেড মেলামাইন পানির জগ। দৈনন্দিন ব্যবহার ও মেহমানদারির জন্য উপযুক্ত।",
+      "warranty": "12 Months Replacement",
+      "sku": "",
+      "variants": [
+        {
+          "colorName": "Classic White",
+          "colorCode": "#F1F5F9",
+          "images": [
+            "https://images.unsplash.com/photo-1517256064527-09c73fc73e38?w=600&auto=format&fit=crop&q=80"
+          ]
+        }
+      ],
+      "__v": 1,
+      "createdAt": "2026-10-10T14:37:27.163Z",
+      "updatedAt": "2026-10-24T17:08:44.114Z",
+      "collections": {
+        "bestSelling": false,
+        "newArrival": false,
+        "hotOffer": false,
+        "popular": false
+      },
+      "images": [
+        "https://images.unsplash.com/photo-1517256064527-09c73fc73e38?w=600&auto=format&fit=crop&q=80"
+      ],
+      "videoUrl": ""
+    },
+    {
+      "_id": "6aca4da7071d09eb16d529ad",
+      "id": 7,
+      "name": "আইস ফেইস রোলার - স্কিন গ্লো অ্যান্ড পাফিনেস রিমুভার",
+      "price": 150,
+      "oldPrice": 220,
+      "discount": "-32%",
+      "category": "beauty",
+      "rating": 0,
+      "reviews": 0,
+      "tag": "Top Rated",
+      "stock": 45,
+      "thumbnail": "https://images.unsplash.com/photo-1598440947619-2c35fc9aa908?w=600&auto=format&fit=crop&q=80",
+      "description": "মুখের ফোলাভাব দূর করতে এবং ত্বক টানটান ও উজ্জ্বল রাখতে সিলিকন আইস ফেস রোলার। ব্রণ ও ডার্ক সার্কেল কমাতে সহায়ক।",
+      "warranty": "12 Months Replacement",
+      "sku": "",
+      "variants": [
+        {
+          "colorName": "Pink",
+          "colorCode": "#F472B6",
+          "images": [
+            "https://images.unsplash.com/photo-1598440947619-2c35fc9aa908?w=600&auto=format&fit=crop&q=80"
+          ]
+        }
+      ],
+      "__v": 1,
+      "createdAt": "2026-10-10T14:37:27.166Z",
+      "updatedAt": "2026-10-24T17:08:44.114Z",
+      "collections": {
+        "bestSelling": false,
+        "newArrival": false,
+        "hotOffer": false,
+        "popular": false
+      },
+      "images": [
+        "https://images.unsplash.com/photo-1598440947619-2c35fc9aa908?w=600&auto=format&fit=crop&q=80"
+      ],
+      "videoUrl": ""
+    },
+    {
+      "_id": "6aca4da7071d09eb16d529ae",
+      "id": 8,
+      "name": "মেলামাইন ৯ ইঞ্চি স্যুপ প্লেট - ব্রেক রেজিস্ট্যান্ট",
+      "price": 90,
+      "oldPrice": 110,
+      "discount": "-18%",
+      "category": "kitchen",
+      "rating": 0,
+      "reviews": 0,
+      "tag": "Special Offer",
+      "stock": 79,
+      "thumbnail": "https://images.unsplash.com/photo-1610701596007-11502861dcfa?w=600&auto=format&fit=crop&q=80",
+      "description": "উচ্চমানের ফুড-গ্রেড মেলামাইন দিয়ে তৈরি ৯ ইঞ্চি ডীপ স্যুপ প্লেট। দীর্ঘস্থায়ী, সহজে ভাঙে না এবং পরিষ্কার করা অত্যন্ত সহজ।",
+      "warranty": "12 Months Replacement",
+      "sku": "",
+      "variants": [
+        {
+          "colorName": "White",
+          "colorCode": "#F8FAFC",
+          "images": [
+            "https://images.unsplash.com/photo-1610701596007-11502861dcfa?w=600&auto=format&fit=crop&q=80"
+          ]
+        }
+      ],
+      "__v": 1,
+      "createdAt": "2026-10-10T14:37:27.166Z",
+      "updatedAt": "2026-10-24T17:08:44.114Z",
+      "collections": {
+        "bestSelling": false,
+        "newArrival": false,
+        "hotOffer": false,
+        "popular": false
+      },
+      "images": [
+        "https://images.unsplash.com/photo-1610701596007-11502861dcfa?w=600&auto=format&fit=crop&q=80"
+      ],
+      "videoUrl": ""
+    },
+    {
+      "_id": "6aca4da7071d09eb16d529af",
+      "id": 9,
+      "name": "বাচ্চাদের অ্যান্টি-স্লিপ হাঁটুর মোজা (নি-প্যাড প্রোটেক্টর)",
+      "price": 120,
+      "oldPrice": 180,
+      "discount": "-33%",
+      "category": "baby-kids",
+      "rating": 0,
+      "reviews": 0,
+      "tag": "Best Seller",
+      "stock": 65,
+      "thumbnail": "https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=600&auto=format&fit=crop&q=80",
+      "description": "বাচ্চারা যখন হাঁটু গেড়ে হামাগুড়ি দেয় তখন হাঁটুকে মেঝেতে ঘষা ও আঘাত থেকে বাঁচাতে সফট ও কমফোর্টেবল অ্যান্টি-স্লিপ নি প্যড মোজা।",
+      "warranty": "12 Months Replacement",
+      "sku": "",
+      "variants": [
+        {
+          "colorName": "Rosy Brown",
+          "colorCode": "#D39F9C",
+          "images": [
+            "https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=600&auto=format&fit=crop&q=80"
+          ]
+        }
+      ],
+      "__v": 1,
+      "createdAt": "2026-10-10T14:37:27.167Z",
+      "updatedAt": "2026-10-24T17:08:44.114Z",
+      "collections": {
+        "bestSelling": false,
+        "newArrival": false,
+        "hotOffer": false,
+        "popular": false
+      },
+      "images": [
+        "https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=600&auto=format&fit=crop&q=80"
+      ],
+      "videoUrl": ""
+    }
+  ],
+  "tags": [
+    "Daily Essential",
+    "Popular",
+    "Hot Deal",
+    "Best Seller",
+    "Discount",
+    "Top Rated",
+    "Special Offer"
+  ],
+  "pagination": {
+    "totalProducts": 8,
+    "totalPages": 1,
+    "currentPage": 1,
+    "limit": 10,
+    "hasNextPage": false,
+    "hasPrevPage": false
+  }
+}
