@@ -40,9 +40,18 @@ const AdminDashboard = () => {
   const loadDashboardData = useCallback(async () => {
     try {
       const [statusRes, ordersRes, productsRes, courierRes, preOrdersRes] = await Promise.all([
-        fetchSystemStatusAPI(),
-        fetchAdminOrdersAPI({ limit: 10 }),
-        fetchAdminProductsAPI({ stockFilter: 'low' }),
+        fetchSystemStatusAPI().catch((err) => {
+          console.warn('[AdminDashboard] Failed to fetch system status:', err);
+          return null;
+        }),
+        fetchAdminOrdersAPI({ limit: 10 }).catch((err) => {
+          console.error('[AdminDashboard] Failed to fetch recent orders:', err);
+          return { orders: [] };
+        }),
+        fetchAdminProductsAPI({ stockFilter: 'low' }).catch((err) => {
+          console.warn('[AdminDashboard] Failed to fetch low stock products:', err);
+          return [];
+        }),
         getCourierBalanceAPI().catch(() => ({ balance: null })),
         fetchAdminPreOrdersAPI().catch(() => ({ preOrders: [] })),
       ]);
