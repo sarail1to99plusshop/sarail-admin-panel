@@ -256,6 +256,22 @@ export const deleteAdminDeliveryChargeAPI = async (id) => {
 };
 
 // ---------------------------------------------------------------------------
+// BANGLADESH 64 DISTRICTS STATUS MANAGEMENT (Enable / Disable Districts)
+// ---------------------------------------------------------------------------
+export const fetchAdminDistrictsAPI = async (params = {}) => {
+  const res = await api.get('/api/admin/districts', { params });
+  return res.data;
+};
+
+export const updateAdminDistrictStatusAPI = async (idOrName, isActive) => {
+  const res = await api.patch(
+    `/api/admin/districts/${encodeURIComponent(idOrName)}/status`,
+    { isActive }
+  );
+  return res.data;
+};
+
+// ---------------------------------------------------------------------------
 // MONTHLY DELIVERED REPORT
 // ---------------------------------------------------------------------------
 export const fetchMonthlyDeliveredReportAPI = async ({
