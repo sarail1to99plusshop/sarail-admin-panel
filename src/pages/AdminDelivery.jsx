@@ -416,7 +416,7 @@ const AdminDelivery = () => {
             <div>
               <span className="font-bold">Active Storefront Rates:</span>
               <span className="ml-1 text-indigo-800">
-                Inside Brahmanbaria (৳60), Inside Dhaka (৳120), Outside Brahmanbaria (৳130).
+                Inside Brahmanbaria City (৳60), Inside Dhaka City (৳120), Outside Dhaka and Brahmanbaria (Rest of Bangladesh) (৳130).
               </span>
             </div>
             <span className="text-[11px] text-indigo-700 font-medium">
