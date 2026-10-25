@@ -37,6 +37,23 @@ import {
   setImgBBApiKey,
 } from '../services/imgbbService';
 
+export const isInvalidProductImage = (url) => {
+  if (!url || typeof url !== 'string') return true;
+  const lower = url.trim().toLowerCase();
+  return (
+    lower === '' ||
+    lower === 'undefined' ||
+    lower === 'null' ||
+    lower.includes('without-bg') ||
+    lower.includes('without bg') ||
+    lower.includes('/logo.png') ||
+    lower.endsWith('logo.png') ||
+    lower.endsWith('logo.webp') ||
+    lower.includes('website logo') ||
+    lower.includes('product-placeholder')
+  );
+};
+
 const DEFAULT_CATEGORIES = [
   { id: 'kitchen', name: 'Kitchen & Dining (রান্নাঘর ও ডাইনিং)', label: 'Kitchen & Dining (রান্নাঘর ও ডাইনিং)' },
   { id: 'cleaning', name: 'Cleaning & Hygiene (পরিষ্কার-পরিচ্ছন্নতা)', label: 'Cleaning & Hygiene (পরিষ্কার-পরিচ্ছন্নতা)' },
@@ -275,7 +292,22 @@ const AdminProducts = () => {
         category: selectedCategory,
         stockFilter,
       });
-      setProducts(data || []);
+      const sanitized = (data || []).map((p) => {
+        const cleanThumb = !isInvalidProductImage(p.thumbnail) ? p.thumbnail : '';
+        const cleanVariants = Array.isArray(p.variants)
+          ? p.variants.map((v) => ({
+              ...v,
+              images: (v.images || []).filter((img) => !isInvalidProductImage(img)),
+            }))
+          : [];
+        const fallbackThumb = cleanVariants[0]?.images?.[0] || '';
+        return {
+          ...p,
+          thumbnail: cleanThumb || fallbackThumb || '',
+          variants: cleanVariants,
+        };
+      });
+      setProducts(sanitized);
     } catch (err) {
       setFeedback({ type: 'error', message: err.message || 'Failed to load products.' });
     } finally {
@@ -353,17 +385,24 @@ const AdminProducts = () => {
       preparedVariants = product.variants.map((v) => ({
         colorName: v.colorName || 'Standard',
         colorCode: v.colorCode || '#3B82F6',
-        images: Array.isArray(v.images) ? [...v.images] : [],
+        images: Array.isArray(v.images)
+          ? v.images.filter((img) => !isInvalidProductImage(img))
+          : [],
       }));
     } else {
+      const cleanImg = !isInvalidProductImage(product.thumbnail) ? [product.thumbnail] : [];
       preparedVariants = [
         {
           colorName: 'Standard',
           colorCode: '#3B82F6',
-          images: product.thumbnail ? [product.thumbnail] : [],
+          images: cleanImg,
         },
       ];
     }
+
+    const cleanThumb = !isInvalidProductImage(product.thumbnail)
+      ? product.thumbnail
+      : (preparedVariants[0]?.images?.[0] || '');
 
     setFormData({
       name: product.name || '',
@@ -372,7 +411,7 @@ const AdminProducts = () => {
       discount: product.discount || '',
       category: product.category || categories[0]?.id || 'kitchen',
       stock: product.stock !== undefined ? product.stock : 50,
-      thumbnail: product.thumbnail || preparedVariants[0]?.images?.[0] || '',
+      thumbnail: cleanThumb,
       videoUrl: product.videoUrl || '',
       description: product.description || '',
       warranty: product.warranty || '12 Months Replacement',
@@ -609,27 +648,30 @@ const AdminProducts = () => {
   // Direct Cover Photo Handlers
   const handleDirectThumbnailChange = (url) => {
     const trimmed = (url || '').trim();
+    const isClean = !isInvalidProductImage(trimmed);
+    const validUrl = isClean ? trimmed : '';
+
     setFormData((prev) => {
       const updatedVariants = [...prev.variants];
       if (updatedVariants.length === 0) {
         updatedVariants.push({
           colorName: 'Standard',
           colorCode: '#3B82F6',
-          images: trimmed ? [trimmed] : [],
+          images: validUrl ? [validUrl] : [],
         });
-      } else if (trimmed) {
+      } else if (validUrl) {
         const firstVariant = updatedVariants[0];
-        const existingImages = firstVariant.images || [];
-        if (!existingImages.includes(trimmed)) {
+        const existingImages = (firstVariant.images || []).filter((img) => !isInvalidProductImage(img));
+        if (!existingImages.includes(validUrl)) {
           updatedVariants[0] = {
             ...firstVariant,
-            images: [trimmed, ...existingImages],
+            images: [validUrl, ...existingImages],
           };
         }
       }
       return {
         ...prev,
-        thumbnail: trimmed,
+        thumbnail: validUrl,
         variants: updatedVariants,
       };
     });
@@ -741,13 +783,16 @@ const AdminProducts = () => {
     }
 
     // Check that at least one photo has been uploaded across all variants or provided in thumbnail
-    const allImages = formData.variants.flatMap((v) => v.images || []);
-    const finalThumbnail = (formData.thumbnail || '').trim() || allImages[0] || '';
+    const allImages = formData.variants
+      .flatMap((v) => v.images || [])
+      .filter((img) => !isInvalidProductImage(img));
+    const rawThumb = (formData.thumbnail || '').trim();
+    const finalThumbnail = (!isInvalidProductImage(rawThumb) && rawThumb) || allImages[0] || '';
 
     if (!finalThumbnail && allImages.length === 0) {
       setFeedback({
         type: 'error',
-        message: 'Please upload or provide at least one product photo.',
+        message: 'Please upload or provide at least one valid product photo from ImgBB.',
       });
       return;
     }
@@ -755,14 +800,19 @@ const AdminProducts = () => {
     setSaving(true);
     setFeedback({ type: '', message: '' });
 
-    // Clean variants array
+    // Clean variants array (filter out any placeholder/logo URLs)
     const cleanedVariants = formData.variants
-      .filter((v) => v.colorName.trim() !== '' || (v.images && v.images.length > 0))
-      .map((v) => ({
-        colorName: v.colorName.trim() || 'Standard',
-        colorCode: v.colorCode || '#3B82F6',
-        images: Array.isArray(v.images) && v.images.length > 0 ? v.images : [finalThumbnail].filter(Boolean),
-      }));
+      .map((v) => {
+        const cleanVImages = (Array.isArray(v.images) ? v.images : []).filter(
+          (img) => !isInvalidProductImage(img)
+        );
+        return {
+          colorName: v.colorName.trim() || 'Standard',
+          colorCode: v.colorCode || '#3B82F6',
+          images: cleanVImages.length > 0 ? cleanVImages : [finalThumbnail].filter(Boolean),
+        };
+      })
+      .filter((v) => v.colorName.trim() !== '' || v.images.length > 0);
 
     if (cleanedVariants.length === 0) {
       cleanedVariants.push({
@@ -773,7 +823,7 @@ const AdminProducts = () => {
     }
 
     if (finalThumbnail && cleanedVariants[0] && !cleanedVariants[0].images.includes(finalThumbnail)) {
-      cleanedVariants[0].images = [finalThumbnail, ...cleanedVariants[0].images];
+      cleanedVariants[0].images = [finalThumbnail, ...cleanedVariants[0].images.filter((img) => img !== finalThumbnail)];
     }
 
     const payload = {
@@ -1021,12 +1071,11 @@ const AdminProducts = () => {
                         <div className="flex items-center gap-3">
                           <div className="relative shrink-0">
                             <img
-                              src={product.thumbnail}
+                              src={(!isInvalidProductImage(product.thumbnail) && product.thumbnail) || '/product-placeholder.svg'}
                               alt={product.name}
                               className="w-12 h-12 rounded-xl object-cover bg-slate-100 border border-slate-200"
                               onError={(e) => {
-                                e.target.src =
-                                  'https://placehold.co/100x100/f1f5f9/64748b?text=No+Img';
+                                e.target.src = '/product-placeholder.svg';
                               }}
                             />
                             {totalImages > 1 && (
@@ -1524,7 +1573,7 @@ const AdminProducts = () => {
                         alt="Product Cover Preview"
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          e.target.src = 'https://placehold.co/100x100/f1f5f9/64748b?text=Cover';
+                          e.target.src = '/product-placeholder.svg';
                         }}
                       />
                     ) : (
@@ -1804,8 +1853,7 @@ const AdminProducts = () => {
                                       alt={`${variant.colorName} photo ${imgIdx + 1}`}
                                       className="w-full h-24 object-cover"
                                       onError={(e) => {
-                                        e.target.src =
-                                          'https://placehold.co/100x100/f1f5f9/64748b?text=Broken';
+                                        e.target.src = '/product-placeholder.svg';
                                       }}
                                     />
 
@@ -1946,7 +1994,7 @@ const AdminProducts = () => {
                 <div className="max-w-xs mx-auto bg-white rounded-2xl border border-slate-200 p-3 shadow-md space-y-2">
                   <div className="relative aspect-square rounded-xl overflow-hidden bg-slate-100 border border-slate-100">
                     <img
-                      src={formData.thumbnail || 'https://placehold.co/400x400/f8fafc/64748b?text=Upload+Photo'}
+                      src={formData.thumbnail || '/product-placeholder.svg'}
                       alt="Preview"
                       className="w-full h-full object-cover"
                     />
