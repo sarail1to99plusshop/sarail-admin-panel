@@ -7,7 +7,6 @@ import {
   FiX,
   FiRefreshCw,
   FiClock,
-  FiDollarSign,
   FiMapPin,
   FiCheckCircle,
   FiAlertTriangle,
@@ -15,7 +14,7 @@ import {
   FiCheckSquare,
   FiSlash,
 } from 'react-icons/fi';
-import { TbTruckDelivery } from 'react-icons/tb';
+import { TbTruckDelivery, TbCurrencyTaka } from 'react-icons/tb';
 import {
   fetchAdminDeliveryChargesAPI,
   createAdminDeliveryChargeAPI,
@@ -479,7 +478,7 @@ const AdminDelivery = () => {
                       {/* Fee Display & Inline Edit */}
                       <div className="flex items-center justify-between pt-2">
                         <span className="text-xs font-semibold text-slate-600 flex items-center gap-1">
-                          <FiDollarSign className="w-3.5 h-3.5 text-emerald-600" />
+                          <TbCurrencyTaka className="w-3.5 h-3.5 text-emerald-600" />
                           Delivery Fee:
                         </span>
 

@@ -1,17 +1,33 @@
-// In development mode on localhost, use empty base URL so requests go to the same origin (http://localhost:5174/api/...)
-// and are proxied by Vite dev server directly to the backend. This eliminates CORS preflight issues entirely.
 const isDev = import.meta.env.DEV;
-export const API_BASE_URL = isDev
-  ? ''
-  : (import.meta.env.VITE_API_URL || 'https://store-backend-taupe-six.vercel.app');
+
+export const getApiBaseUrl = () => {
+  if (isDev) {
+    return '';
+  }
+  const envUrl = (import.meta.env.VITE_API_URL || '').trim();
+  const isBrowser = typeof window !== 'undefined' && window.location;
+  const isLocalHost = isBrowser && (
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1' ||
+    window.location.hostname === '0.0.0.0'
+  );
+
+  // If in production on a public/mobile domain, never route to localhost:5000
+  if (envUrl && (!envUrl.includes('localhost') && !envUrl.includes('127.0.0.1') || isLocalHost)) {
+    return envUrl.replace(/\/+$/, '');
+  }
+
+  return 'https://store-backend-taupe-six.vercel.app';
+};
+
+export const API_BASE_URL = getApiBaseUrl();
 
 const buildUrl = (path, params) => {
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
-  const base = API_BASE_URL
-    ? API_BASE_URL.replace(/\/+$/, '')
-    : (typeof window !== 'undefined' && window.location?.origin
+  const base = getApiBaseUrl()
+    || (typeof window !== 'undefined' && window.location?.origin
         ? window.location.origin
-        : 'http://localhost:5174');
+        : 'https://store-backend-taupe-six.vercel.app');
   const url = new URL(`${base}${cleanPath}`);
 
   if (params && typeof params === 'object') {
@@ -24,7 +40,29 @@ const buildUrl = (path, params) => {
   return url.toString();
 };
 
-const request = async (method, path, { params, data } = {}) => {
+export const safeJsonStringify = (data) => {
+  if (data === undefined) return undefined;
+  if (typeof data === 'string') return data;
+  try {
+    return JSON.stringify(data);
+  } catch {
+    const seen = new WeakSet();
+    return JSON.stringify(data, (key, value) => {
+      if (typeof value === 'object' && value !== null) {
+        if (typeof window !== 'undefined' && (value instanceof Node || value instanceof Element || value.nodeType)) {
+          return undefined; // Exclude raw DOM nodes
+        }
+        if (seen.has(value)) {
+          return undefined; // Exclude circular references
+        }
+        seen.add(value);
+      }
+      return value;
+    });
+  }
+};
+
+const request = async (method, path, { params, data, signal } = {}) => {
   const headers = {
     'Content-Type': 'application/json',
     Accept: 'application/json',
@@ -42,7 +80,8 @@ const request = async (method, path, { params, data } = {}) => {
   const response = await fetch(buildUrl(path, params), {
     method,
     headers,
-    body: data !== undefined ? JSON.stringify(data) : undefined,
+    body: data !== undefined ? safeJsonStringify(data) : undefined,
+    signal,
   });
 
   const responseData = await response.json().catch(() => ({}));
@@ -332,8 +371,10 @@ export const deleteCategoryAPI = async (id) => {
 // ---------------------------------------------------------------------------
 // IMGBB IMAGE UPLOAD PROXY (BACKEND FALLBACK)
 // ---------------------------------------------------------------------------
-export const uploadImageToBackendAPI = async ({ image, name }) => {
-  const res = await api.post('/api/admin/upload-image', { image, name });
+export const uploadImageToBackendAPI = async ({ image, name }, options = {}) => {
+  const cleanImage = typeof image === 'string' ? image : '';
+  const cleanName = typeof name === 'string' ? name : 'product-image.webp';
+  const res = await api.post('/api/admin/upload-image', { image: cleanImage, name: cleanName }, options);
   return res.data;
 };
 

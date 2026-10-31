@@ -44,6 +44,51 @@ const AdminLayout = () => {
   const [newOrderAlert, setNewOrderAlert] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
 
+  // Live Dhaka (Asia/Dhaka) Date and Time (R11)
+  const [dhakaTime, setDhakaTime] = useState(() => {
+    try {
+      return new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Dhaka',
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }).format(new Date());
+    } catch {
+      return '';
+    }
+  });
+
+  useEffect(() => {
+    const updateDhakaTime = () => {
+      try {
+        setDhakaTime(
+          new Intl.DateTimeFormat('en-GB', {
+            timeZone: 'Asia/Dhaka',
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+          }).format(new Date())
+        );
+      } catch {
+        // ignore
+      }
+    };
+    const timer = setInterval(updateDhakaTime, 30000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const storefrontUrl =
+    import.meta.env.VITE_STOREFRONT_URL ||
+    (typeof window !== 'undefined'
+      ? window.location.origin.replace(':5174', ':5173')
+      : 'https://sarail1to99plus-shop.com');
+
   // Persistent tracking of invoices that have already triggered an alert
   const alertedOrdersRef = useRef(null);
   if (alertedOrdersRef.current === null) {
@@ -268,12 +313,12 @@ const AdminLayout = () => {
 
       {/* ---------------- SIDEBAR (Desktop fixed, Mobile Drawer) ---------------- */}
       <aside
-        className={`fixed md:sticky top-0 left-0 h-screen w-64 bg-white border-r border-slate-200 flex flex-col z-50 transition-transform duration-300 ease-in-out shadow-lg md:shadow-none ${
+        className={`fixed md:sticky top-0 left-0 h-screen w-64 bg-[#0D192C] text-slate-100 border-r border-[#172B46] flex flex-col z-50 transition-transform duration-300 ease-in-out shadow-lg md:shadow-none ${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
         {/* Brand Header with Logo */}
-        <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+        <div className="p-4 border-b border-[#172B46] flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
             <img
               src="/logo.png"
@@ -281,33 +326,33 @@ const AdminLayout = () => {
               className="h-10 w-auto object-contain shrink-0 rounded-lg drop-shadow-sm"
             />
             <div className="min-w-0">
-              <h1 className="font-black text-sm text-slate-900 tracking-tight truncate">
+              <h1 className="font-black text-sm text-white tracking-tight truncate">
                 Sarail 1 to 99+
               </h1>
-              <p className="text-[11px] text-indigo-600 font-bold uppercase tracking-wider">
+              <p className="text-[11px] text-[#38BDF8] font-bold uppercase tracking-wider">
                 Admin Panel
               </p>
             </div>
           </div>
           <button
             onClick={() => setMobileMenuOpen(false)}
-            className="md:hidden text-slate-500 hover:text-slate-900 p-1"
+            className="md:hidden text-slate-400 hover:text-white p-1"
           >
             <FiX className="w-5 h-5" />
           </button>
         </div>
 
         {/* Database Status Card in Sidebar */}
-        <div className="p-3.5 mx-3 my-3 rounded-xl bg-slate-50 border border-slate-200 shadow-sm">
+        <div className="p-3.5 mx-3 my-3 rounded-xl bg-[#172B46] border border-[#233B5D] shadow-sm">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-300">
               Database Status
             </span>
             <button
               onClick={checkDatabaseStatus}
               disabled={dbStatus.loading}
               title="Ping & Refresh Database Status"
-              className="text-slate-400 hover:text-slate-700 transition-colors disabled:opacity-50"
+              className="text-slate-400 hover:text-white transition-colors disabled:opacity-50"
             >
               <FiRefreshCw className={`w-3.5 h-3.5 ${dbStatus.loading ? 'animate-spin' : ''}`} />
             </button>
@@ -317,22 +362,22 @@ const AdminLayout = () => {
             <span
               className={`w-2.5 h-2.5 rounded-full ${
                 dbStatus.databaseConnected
-                  ? 'bg-emerald-500 animate-status-pulse shadow-sm shadow-emerald-400/50'
+                  ? 'bg-emerald-400 animate-status-pulse shadow-sm shadow-emerald-400/50'
                   : 'bg-rose-500 shadow-sm shadow-rose-500/50'
               }`}
             />
             <span
               className={`text-xs font-bold ${
                 dbStatus.databaseConnected
-                  ? 'text-emerald-700'
-                  : 'text-rose-700'
+                  ? 'text-emerald-300'
+                  : 'text-rose-300'
               }`}
             >
               {dbStatus.databaseConnected ? 'Active (Connected)' : 'Disconnect'}
             </span>
           </div>
 
-          <p className="text-[10px] text-slate-500 mt-1 truncate">
+          <p className="text-[10px] text-slate-400 mt-1 truncate">
             {dbStatus.databaseConnected
               ? `${dbStatus.host} (${dbStatus.latencyMs}ms)`
               : 'MongoDB Offline / Reconnecting'}
@@ -351,15 +396,15 @@ const AdminLayout = () => {
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
                     isActive
-                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                      ? 'bg-[#2563EB] text-white shadow-md shadow-blue-500/25'
+                      : 'text-slate-300 hover:text-white hover:bg-[#172B46]'
                   }`
                 }
               >
                 <Icon className="w-4 h-4 shrink-0" />
                 <span>{item.label}</span>
                 {item.path === '/orders' && unreadCount > 0 && (
-                  <span className="ml-auto bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                  <span className="ml-auto bg-[#DC3545] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
                     {unreadCount}
                   </span>
                 )}
@@ -369,29 +414,29 @@ const AdminLayout = () => {
         </nav>
 
         {/* External Store Link & Admin Info */}
-        <div className="p-4 border-t border-slate-200 space-y-3">
+        <div className="p-4 border-t border-[#172B46] space-y-3">
           <a
-            href="http://localhost:5173"
+            href={storefrontUrl}
             target="_blank"
-            rel="noreferrer"
-            className="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 text-xs font-semibold border border-slate-200 transition-colors"
+            rel="noopener noreferrer"
+            className="flex items-center justify-between px-3 py-2 rounded-lg bg-[#172B46] hover:bg-[#1F3A5E] text-slate-200 hover:text-white text-xs font-semibold border border-[#233B5D] transition-colors"
           >
             <span className="flex items-center gap-2">
-              <FiExternalLink className="w-3.5 h-3.5 text-indigo-600" />
+              <FiExternalLink className="w-3.5 h-3.5 text-[#38BDF8]" />
               <span>Visit Customer Store</span>
             </span>
           </a>
 
           <div className="flex items-center justify-between pt-1">
             <div className="flex items-center gap-2 min-w-0">
-              <div className="w-8 h-8 rounded-full bg-indigo-50 border border-indigo-200 flex items-center justify-center text-xs font-bold text-indigo-600">
+              <div className="w-8 h-8 rounded-full bg-[#2563EB] flex items-center justify-center text-xs font-bold text-white shadow-xs">
                 {admin?.name?.charAt(0) || 'A'}
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-bold text-slate-900 truncate">
+                <p className="text-xs font-bold text-white truncate">
                   {admin?.name || 'Admin'}
                 </p>
-                <p className="text-[10px] text-slate-500 truncate">
+                <p className="text-[10px] text-slate-400 truncate">
                   {admin?.email}
                 </p>
               </div>
@@ -403,7 +448,7 @@ const AdminLayout = () => {
                 navigate('/login');
               }}
               title="Logout from Admin"
-              className="p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+              className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer"
             >
               <FiLogOut className="w-4 h-4" />
             </button>
@@ -412,14 +457,19 @@ const AdminLayout = () => {
       </aside>
 
       {/* ---------------- MAIN CONTENT WRAPPER ---------------- */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 bg-[#F4F7FB]">
         {/* Desktop Top Header Bar */}
-        <header className="hidden md:flex items-center justify-between px-8 py-4 bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-20 transition-colors">
+        <header className="hidden md:flex items-center justify-between px-8 py-3.5 bg-white/95 backdrop-blur-md border-b border-slate-200 sticky top-0 z-20 transition-colors">
           <div className="flex items-center gap-3">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-semibold">
-              <FiShield className="w-3.5 h-3.5" />
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-[#0D192C] text-white text-xs font-semibold">
+              <FiShield className="w-3.5 h-3.5 text-[#38BDF8]" />
               <span>Sarail 1 to 99 Plus • Admin Portal</span>
             </div>
+            {dhakaTime && (
+              <span className="text-xs font-semibold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200" title="Asia/Dhaka Local Time">
+                🕒 {dhakaTime} (Dhaka)
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-3">

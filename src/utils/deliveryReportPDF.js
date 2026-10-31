@@ -463,8 +463,8 @@ export const generateDeliveryReportPDF = (reportData, { year = '', month = '' } 
             <tr>
               <td class="font-mono font-bold">${o.invoiceNumber}</td>
               <td class="font-mono">${new Date(
-                o.createdAt || Date.now()
-              ).toLocaleDateString('en-GB')}</td>
+                o.deliveredAt || o.createdAt || Date.now()
+              ).toLocaleDateString('en-GB', { timeZone: 'Asia/Dhaka' })}</td>
               <td>
                 <div class="font-bold">${o.customerDetails?.name || 'Customer'}</div>
                 <div class="font-mono" style="color: #4f46e5; font-size: 9px;">${

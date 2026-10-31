@@ -13,7 +13,7 @@ import {
   FiInbox,
   FiPhone,
 } from 'react-icons/fi';
-import { TbTruckDelivery, TbBrandWhatsapp } from 'react-icons/tb';
+import { TbTruckDelivery, TbBrandWhatsapp, TbCurrencyTaka } from 'react-icons/tb';
 import {
   fetchSystemStatusAPI,
   fetchAdminOrdersAPI,
@@ -318,9 +318,9 @@ const AdminDashboard = () => {
               </span>
             </div>
             <a
-              href="https://portal.packzy.com"
+              href="https://steadfast.com.bd/login"
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
               className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 px-3.5 py-2 rounded-xl border border-indigo-200 dark:border-indigo-800 transition-colors"
             >
               <span>Merchant Portal</span>
@@ -339,7 +339,7 @@ const AdminDashboard = () => {
               Delivered Revenue
             </span>
             <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-              <FiDollarSign className="w-5 h-5" />
+              <TbCurrencyTaka className="w-5 h-5 text-emerald-600" />
             </div>
           </div>
           <div className="mt-3">

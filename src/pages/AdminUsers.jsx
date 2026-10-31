@@ -19,8 +19,8 @@ import {
   FiAward,
   FiCreditCard,
   FiPackage,
-  FiDollarSign,
 } from 'react-icons/fi';
+import { TbCurrencyTaka } from 'react-icons/tb';
 import { fetchAdminUsersAPI, fetchAdminUserOrdersAPI } from '../services/api';
 
 const AdminUsers = () => {
@@ -210,7 +210,7 @@ const AdminUsers = () => {
             <span className="text-[11px] text-slate-400 mt-0.5 block">Total lifetime orders value</span>
           </div>
           <div className="w-12 h-12 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center text-violet-600">
-            <FiDollarSign className="w-6 h-6" />
+            <TbCurrencyTaka className="w-6 h-6" />
           </div>
         </div>
 
