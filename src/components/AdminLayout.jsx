@@ -83,11 +83,7 @@ const AdminLayout = () => {
     return () => clearInterval(timer);
   }, []);
 
-  const storefrontUrl =
-    import.meta.env.VITE_STOREFRONT_URL ||
-    (typeof window !== 'undefined'
-      ? window.location.origin.replace(':5174', ':5173')
-      : 'https://sarail1to99plus-shop.com');
+  const storefrontUrl = 'https://sarail1to99plus-shop.com';
 
   // Persistent tracking of invoices that have already triggered an alert
   const alertedOrdersRef = useRef(null);

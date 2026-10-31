@@ -69,16 +69,29 @@ const DEFAULT_CATEGORIES = [
   { id: 'General', name: 'General / Others', label: 'General / Others' },
 ];
 
-const PRESET_TAGS = [
-  'Daily Essential',
+export const OFFICIAL_TAGS = [
+  'Best Selling',
+  'New Arrivals',
   'Hot Offer',
-  'Popular',
-  'Flash Sale',
-  'Trending',
-  'Best Value',
-  'New Arrival',
-  'Exclusive',
+  'Popular / Hit Items',
 ];
+
+const normalizeTagForAdmin = (rawTag, collections = {}) => {
+  const str = String(rawTag || '').toLowerCase().trim();
+  if (str === 'best selling' || str === 'bestselling' || str.includes('best') || collections?.bestSelling) {
+    if (str.includes('best') || (!rawTag && collections?.bestSelling)) return 'Best Selling';
+  }
+  if (str === 'new arrivals' || str === 'new arrival' || str === 'newarrivals' || str.includes('new') || str.includes('arrival') || collections?.newArrival) {
+    if (str.includes('new') || (!rawTag && collections?.newArrival)) return 'New Arrivals';
+  }
+  if (str === 'hot offer' || str === 'hotoffer' || str.includes('hot') || str.includes('deal') || collections?.hotOffer) {
+    if (str.includes('hot') || (!rawTag && collections?.hotOffer)) return 'Hot Offer';
+  }
+  if (str.includes('popular') || str.includes('hit') || collections?.popular) {
+    return 'Popular / Hit Items';
+  }
+  return '';
+};
 
 const emptyProductForm = {
   name: '',
@@ -92,7 +105,7 @@ const emptyProductForm = {
   description: '',
   warranty: '12 Months Replacement',
   sku: '',
-  tag: 'Daily Essential',
+  tag: 'New Arrivals',
   rating: 5,
   reviews: 0,
   collections: {
@@ -302,8 +315,10 @@ const AdminProducts = () => {
             }))
           : [];
         const fallbackThumb = cleanVariants[0]?.images?.[0] || '';
+        const cleanTag = normalizeTagForAdmin(p.tag, p.collections);
         return {
           ...p,
+          tag: cleanTag,
           thumbnail: cleanThumb || fallbackThumb || '',
           variants: cleanVariants,
         };
@@ -472,7 +487,7 @@ const AdminProducts = () => {
       description: product.description || '',
       warranty: product.warranty || '12 Months Replacement',
       sku: product.sku || '',
-      tag: product.tag || 'Daily Essential',
+      tag: normalizeTagForAdmin(product.tag, product.collections),
       rating: product.rating !== undefined ? product.rating : 5,
       reviews: product.reviews || 0,
       collections: {
@@ -1580,6 +1595,41 @@ const AdminProducts = () => {
                     ))}
                   </div>
                 </div>
+
+                {/* Official Product Tag Selection (Only the 4 authorized tags) */}
+                <div className="pt-2">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-slate-700">
+                      Product Tag (Visible Badge on Storefront &amp; Filter):
+                    </label>
+                    <span className="text-[11px] text-slate-500 font-medium">4 Official Tags</span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
+                    {[
+                      { value: '', label: 'None (No Tag)' },
+                      { value: 'Best Selling', label: 'Best Selling' },
+                      { value: 'New Arrivals', label: 'New Arrivals' },
+                      { value: 'Hot Offer', label: 'Hot Offer' },
+                      { value: 'Popular / Hit Items', label: 'Popular / Hit Items' },
+                    ].map(({ value, label }) => {
+                      const isSelected = formData.tag === value;
+                      return (
+                        <button
+                          key={value || 'none'}
+                          type="button"
+                          onClick={() => setFormData((prev) => ({ ...prev, tag: value }))}
+                          className={`p-2 rounded-xl text-xs font-bold border text-center transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                              : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-slate-300'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
 
               {/* SECTION 2: PRICING, DISCOUNT & INVENTORY */}
@@ -2120,7 +2170,15 @@ const AdminProducts = () => {
                       </span>
                     )}
                     {formData.tag && (
-                      <span className="absolute top-2 right-2 bg-indigo-600 text-white font-bold text-[9px] px-2 py-0.5 rounded-full shadow">
+                      <span className={`absolute top-2 right-2 text-white font-black text-[9px] px-2 py-0.5 rounded-full shadow uppercase tracking-wide ${
+                        formData.tag === 'Best Selling'
+                          ? 'bg-[#003D73]'
+                          : formData.tag === 'New Arrivals'
+                          ? 'bg-emerald-700'
+                          : formData.tag === 'Hot Offer'
+                          ? 'bg-amber-600'
+                          : 'bg-[#B80D18]'
+                      }`}>
                         {formData.tag}
                       </span>
                     )}
