@@ -37,6 +37,7 @@ import {
   getImgBBApiKey,
   setImgBBApiKey,
 } from '../services/imgbbService';
+import { getColorName, POPULAR_PRESET_COLORS } from '../utils/colorNames';
 
 export const isInvalidProductImage = (url) => {
   if (!url || typeof url !== 'string') return true;
@@ -116,7 +117,7 @@ const emptyProductForm = {
   },
   variants: [
     {
-      colorName: 'Standard',
+      colorName: 'Blue',
       colorCode: '#3B82F6',
       images: [],
     },
@@ -382,7 +383,7 @@ const AdminProducts = () => {
       category: defaultCategory && defaultCategory !== 'uncategorized' ? defaultCategory : (categories[0]?.id || 'kitchen'),
       variants: [
         {
-          colorName: 'Standard',
+          colorName: 'Blue',
           colorCode: '#3B82F6',
           images: [],
         },
@@ -454,7 +455,7 @@ const AdminProducts = () => {
     let preparedVariants = [];
     if (Array.isArray(product.variants) && product.variants.length > 0) {
       preparedVariants = product.variants.map((v) => ({
-        colorName: v.colorName || 'Standard',
+        colorName: v.colorName || getColorName(v.colorCode) || 'Standard',
         colorCode: v.colorCode || '#3B82F6',
         images: Array.isArray(v.images)
           ? v.images.filter((img) => !isInvalidProductImage(img))
@@ -791,7 +792,7 @@ const AdminProducts = () => {
 
   // Color Variants Management
   const handleAddVariant = () => {
-    const defaultColors = ['#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#000000'];
+    const defaultColors = ['#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#000000', '#1E3A8A', '#F97316'];
     const nextColor = defaultColors[formData.variants.length % defaultColors.length];
 
     setFormData((prev) => ({
@@ -799,7 +800,7 @@ const AdminProducts = () => {
       variants: [
         ...prev.variants,
         {
-          colorName: '',
+          colorName: getColorName(nextColor),
           colorCode: nextColor,
           images: [],
         },
@@ -810,7 +811,17 @@ const AdminProducts = () => {
   const handleUpdateVariantField = (vIdx, field, value) => {
     setFormData((prev) => {
       const updated = [...prev.variants];
-      updated[vIdx] = { ...updated[vIdx], [field]: value };
+      if (!updated[vIdx]) return prev;
+      if (field === 'colorCode') {
+        const autoColorName = getColorName(value);
+        updated[vIdx] = {
+          ...updated[vIdx],
+          colorCode: value,
+          colorName: autoColorName,
+        };
+      } else {
+        updated[vIdx] = { ...updated[vIdx], [field]: value };
+      }
       return { ...prev, variants: updated };
     });
   };
@@ -883,8 +894,9 @@ const AdminProducts = () => {
         const cleanVImages = (Array.isArray(v.images) ? v.images : []).filter(
           (img) => !isInvalidProductImage(img)
         );
+        const resolvedColorName = v.colorName.trim() || getColorName(v.colorCode) || 'Standard';
         return {
-          colorName: v.colorName.trim() || 'Standard',
+          colorName: resolvedColorName,
           colorCode: v.colorCode || '#3B82F6',
           images: cleanVImages.length > 0 ? cleanVImages : [finalThumbnail].filter(Boolean),
         };
@@ -1894,49 +1906,82 @@ const AdminProducts = () => {
                         key={vIdx}
                         className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm space-y-3"
                       >
-                        {/* Variant Header: Color Swatch, Color Name, Remove */}
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
-                          <div className="flex items-center gap-3 flex-1">
-                            {/* Color Picker Swatch */}
-                            <div className="flex items-center gap-2">
-                              <label
-                                htmlFor={`color-picker-${vIdx}`}
-                                className="text-xs font-bold text-slate-700 cursor-pointer"
-                              >
-                                Color:
-                              </label>
-                              <div className="relative flex items-center">
+                        {/* Variant Header: Color Swatch, Color Name, Quick Presets, Remove */}
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 border-b border-slate-100 pb-3">
+                          <div className="flex flex-col gap-2 flex-1">
+                            <div className="flex items-center gap-3 flex-wrap">
+                              {/* Color Picker Swatch */}
+                              <div className="flex items-center gap-2">
+                                <label
+                                  htmlFor={`color-picker-${vIdx}`}
+                                  className="text-xs font-bold text-slate-700 cursor-pointer"
+                                >
+                                  Color:
+                                </label>
+                                <div className="relative flex items-center">
+                                  <input
+                                    id={`color-picker-${vIdx}`}
+                                    type="color"
+                                    value={variant.colorCode || '#3B82F6'}
+                                    onChange={(e) =>
+                                      handleUpdateVariantField(vIdx, 'colorCode', e.target.value)
+                                    }
+                                    className="w-8 h-8 rounded-lg cursor-pointer border border-slate-300 p-0.5 bg-transparent"
+                                  />
+                                  <span className="text-[11px] font-mono text-slate-500 ml-1.5">
+                                    {variant.colorCode || '#3B82F6'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Color Name Input */}
+                              <div className="flex-1 min-w-[200px] max-w-xs">
                                 <input
-                                  id={`color-picker-${vIdx}`}
-                                  type="color"
-                                  value={variant.colorCode || '#3B82F6'}
+                                  type="text"
+                                  required
+                                  value={variant.colorName}
                                   onChange={(e) =>
-                                    handleUpdateVariantField(vIdx, 'colorCode', e.target.value)
+                                    handleUpdateVariantField(vIdx, 'colorName', e.target.value)
                                   }
-                                  className="w-8 h-8 rounded-lg cursor-pointer border border-slate-300 p-0.5 bg-transparent"
+                                  placeholder="Color name (e.g. Red, Blue, Black)"
+                                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-900 font-bold focus:outline-none focus:border-indigo-500 focus:bg-white"
                                 />
-                                <span className="text-[11px] font-mono text-slate-500 ml-1.5">
-                                  {variant.colorCode || '#3B82F6'}
-                                </span>
                               </div>
                             </div>
 
-                            {/* Color Name Input */}
-                            <div className="flex-1 max-w-xs">
-                              <input
-                                type="text"
-                                required
-                                value={variant.colorName}
-                                onChange={(e) =>
-                                  handleUpdateVariantField(vIdx, 'colorName', e.target.value)
-                                }
-                                placeholder="Color name (e.g. Standard, Red, Navy Blue)"
-                                className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-900 font-bold focus:outline-none focus:border-indigo-500 focus:bg-white"
-                              />
+                            {/* Quick Preset Color Swatches */}
+                            <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                              <span className="text-[10px] font-semibold text-slate-400 mr-1">Quick Colors:</span>
+                              {POPULAR_PRESET_COLORS.map((preset) => {
+                                const isSelected = (variant.colorCode || '').toUpperCase() === preset.hex.toUpperCase();
+                                return (
+                                  <button
+                                    key={preset.hex}
+                                    type="button"
+                                    onClick={() => handleUpdateVariantField(vIdx, 'colorCode', preset.hex)}
+                                    title={`${preset.name} (${preset.hex})`}
+                                    className={`w-5 h-5 rounded-full border transition-all duration-150 hover:scale-115 cursor-pointer flex items-center justify-center ${
+                                      isSelected
+                                        ? 'ring-2 ring-offset-1 ring-indigo-500 scale-105 border-transparent'
+                                        : 'border-slate-300 hover:border-slate-400'
+                                    }`}
+                                    style={{ backgroundColor: preset.hex }}
+                                  >
+                                    {isSelected && (
+                                      <span
+                                        className="w-1.5 h-1.5 rounded-full"
+                                        style={{
+                                          backgroundColor: preset.hex === '#FFFFFF' || preset.hex === '#F5F5F5' ? '#000000' : '#FFFFFF'
+                                        }}
+                                      />
+                                    )}
+                                  </button>
+                                );
+                              })}
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-2 self-end sm:self-auto">
+                          <div className="flex items-center gap-2 self-end sm:self-start pt-1">
                             <span className="text-[11px] font-semibold text-slate-500">
                               {variant.images?.length || 0} photo(s)
                             </span>

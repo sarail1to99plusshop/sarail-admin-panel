@@ -21,12 +21,19 @@ import {
   FiPackage,
 } from 'react-icons/fi';
 import { TbCurrencyTaka } from 'react-icons/tb';
-import { fetchAdminUsersAPI, fetchAdminUserOrdersAPI } from '../services/api';
+import {
+  fetchAdminUsersAPI,
+  fetchAdminUserOrdersAPI,
+  fetchAdminOrderingCustomersAPI,
+} from '../services/api';
 
 const AdminUsers = () => {
   const navigate = useNavigate();
 
-  // Main list state
+  // Tab state: 'registered' vs 'ordering'
+  const [activeTab, setActiveTab] = useState('registered');
+
+  // Registered users state
   const [users, setUsers] = useState([]);
   const [kpis, setKpis] = useState({ totalUsers: 0, activeBuyers: 0, totalRevenueFromUsers: 0 });
   const [loading, setLoading] = useState(true);
@@ -34,13 +41,24 @@ const AdminUsers = () => {
   const [filterType, setFilterType] = useState('all'); // 'all', 'yes' (buyers), 'no' (non-buyers)
   const [feedback, setFeedback] = useState({ type: '', text: '' });
 
+  // Ordering customers state
+  const [orderingCustomers, setOrderingCustomers] = useState([]);
+  const [orderingKpis, setOrderingKpis] = useState({
+    totalOrderingCustomers: 0,
+    guestCustomers: 0,
+    registeredOrderingCustomers: 0,
+    totalOrders: 0,
+    totalRevenue: 0,
+  });
+  const [orderingType, setOrderingType] = useState('all'); // 'all', 'registered', 'guest'
+
   // User Orders Modal state
   const [selectedUser, setSelectedUser] = useState(null);
   const [userOrders, setUserOrders] = useState([]);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState('');
 
-  // Fetch users from backend
+  // Fetch registered users from backend
   const loadUsers = useCallback(async () => {
     setLoading(true);
     setFeedback({ type: '', text: '' });
@@ -64,12 +82,40 @@ const AdminUsers = () => {
     }
   }, [search, filterType]);
 
+  // Fetch ordering customers from backend
+  const loadOrderingCustomers = useCallback(async () => {
+    setLoading(true);
+    setFeedback({ type: '', text: '' });
+    try {
+      const data = await fetchAdminOrderingCustomersAPI({
+        search,
+        type: orderingType,
+      });
+      if (data?.success) {
+        setOrderingCustomers(data.customers || []);
+        if (data.kpis) {
+          setOrderingKpis(data.kpis);
+        }
+      } else {
+        setFeedback({ type: 'error', text: data?.message || 'Failed to fetch ordering customers.' });
+      }
+    } catch (err) {
+      setFeedback({ type: 'error', text: err.message || 'Error loading ordering customers from server.' });
+    } finally {
+      setLoading(false);
+    }
+  }, [search, orderingType]);
+
   useEffect(() => {
     const timer = setTimeout(() => {
-      loadUsers();
+      if (activeTab === 'registered') {
+        loadUsers();
+      } else {
+        loadOrderingCustomers();
+      }
     }, 250);
     return () => clearTimeout(timer);
-  }, [loadUsers]);
+  }, [activeTab, loadUsers, loadOrderingCustomers]);
 
   // Open User Orders Modal
   const handleOpenUserOrders = async (user) => {
@@ -140,23 +186,25 @@ const AdminUsers = () => {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-              Customer Accounts
+              {activeTab === 'registered' ? 'Registered Customer Accounts' : 'Ordering Customers'}
             </h1>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-              {users.length} Registered
+              {activeTab === 'registered' ? `${users.length} Accounts` : `${orderingCustomers.length} Buyers`}
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Browse all registered customers, monitor their order count, total spending, and view order histories.
+            {activeTab === 'registered'
+              ? 'Browse genuine registered user accounts in the database, monitor order histories and verify profiles.'
+              : 'Browse all actual purchasing customers (both Guests and Registered users) derived from the orders collection.'}
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <button
-            onClick={loadUsers}
+            onClick={() => (activeTab === 'registered' ? loadUsers() : loadOrderingCustomers())}
             disabled={loading}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-95 transition-all disabled:opacity-50"
-            title="Refresh Users List"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
+            title="Refresh List"
           >
             <FiRefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -164,74 +212,181 @@ const AdminUsers = () => {
         </div>
       </div>
 
-      {/* ---------------- KPI SUMMARY CARDS ---------------- */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Users */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-          <div>
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
-              Total Customers
-            </span>
-            <span className="text-2xl font-black text-slate-900 mt-1 block">
-              {kpis.totalUsers}
-            </span>
-            <span className="text-[11px] text-slate-400 mt-0.5 block">Registered user accounts</span>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
-            <FiUsers className="w-6 h-6" />
-          </div>
-        </div>
+      {/* ---------------- TABS: REGISTERED vs ORDERING ---------------- */}
+      <div className="flex border-b border-slate-200 gap-2">
+        <button
+          onClick={() => {
+            setActiveTab('registered');
+            setSearch('');
+          }}
+          className={`flex items-center gap-2 px-5 py-3 text-xs font-bold border-b-2 transition-all cursor-pointer ${
+            activeTab === 'registered'
+              ? 'border-indigo-600 text-indigo-700 bg-white rounded-t-xl shadow-xs'
+              : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100/60 rounded-t-xl'
+          }`}
+        >
+          <FiUsers className="w-4 h-4" />
+          <span>Registered Accounts</span>
+          <span className="px-2 py-0.5 rounded-full text-[10px] bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold">
+            {kpis.totalUsers}
+          </span>
+        </button>
 
-        {/* Active Buyers */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-          <div>
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
-              Active Buyers
-            </span>
-            <span className="text-2xl font-black text-emerald-600 mt-1 block">
-              {kpis.activeBuyers}
-            </span>
-            <span className="text-[11px] text-slate-400 mt-0.5 block">Placed at least 1 order</span>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
-            <FiShoppingBag className="w-6 h-6" />
-          </div>
-        </div>
-
-        {/* Total Revenue From Registered Users */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-          <div>
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
-              Customer Total Spend
-            </span>
-            <span className="text-2xl font-black text-slate-900 mt-1 block">
-              ৳{kpis.totalRevenueFromUsers.toLocaleString('en-BD')}
-            </span>
-            <span className="text-[11px] text-slate-400 mt-0.5 block">Total lifetime orders value</span>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center text-violet-600">
-            <TbCurrencyTaka className="w-6 h-6" />
-          </div>
-        </div>
-
-        {/* Customer Conversion / Purchase Rate */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-          <div>
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
-              Buyer Conversion
-            </span>
-            <span className="text-2xl font-black text-amber-600 mt-1 block">
-              {kpis.totalUsers > 0
-                ? `${((kpis.activeBuyers / kpis.totalUsers) * 100).toFixed(0)}%`
-                : '0%'}
-            </span>
-            <span className="text-[11px] text-slate-400 mt-0.5 block">Registered to buyer ratio</span>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
-            <FiAward className="w-6 h-6" />
-          </div>
-        </div>
+        <button
+          onClick={() => {
+            setActiveTab('ordering');
+            setSearch('');
+          }}
+          className={`flex items-center gap-2 px-5 py-3 text-xs font-bold border-b-2 transition-all cursor-pointer ${
+            activeTab === 'ordering'
+              ? 'border-indigo-600 text-indigo-700 bg-white rounded-t-xl shadow-xs'
+              : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100/60 rounded-t-xl'
+          }`}
+        >
+          <FiShoppingBag className="w-4 h-4" />
+          <span>Ordering Customers</span>
+          <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold">
+            {orderingKpis.totalOrderingCustomers || orderingCustomers.length}
+          </span>
+        </button>
       </div>
+
+      {/* ---------------- KPI SUMMARY CARDS ---------------- */}
+      {activeTab === 'registered' ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Total Users */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+            <div>
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
+                Total Customers
+              </span>
+              <span className="text-2xl font-black text-slate-900 mt-1 block">
+                {kpis.totalUsers}
+              </span>
+              <span className="text-[11px] text-slate-400 mt-0.5 block">Registered user accounts</span>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+              <FiUsers className="w-6 h-6" />
+            </div>
+          </div>
+
+          {/* Active Buyers */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+            <div>
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
+                Active Buyers
+              </span>
+              <span className="text-2xl font-black text-emerald-600 mt-1 block">
+                {kpis.activeBuyers}
+              </span>
+              <span className="text-[11px] text-slate-400 mt-0.5 block">Placed at least 1 order</span>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
+              <FiShoppingBag className="w-6 h-6" />
+            </div>
+          </div>
+
+          {/* Total Revenue From Registered Users */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+            <div>
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
+                Customer Total Spend
+              </span>
+              <span className="text-2xl font-black text-slate-900 mt-1 block">
+                ৳{kpis.totalRevenueFromUsers.toLocaleString('en-BD')}
+              </span>
+              <span className="text-[11px] text-slate-400 mt-0.5 block">Registered accounts orders value</span>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center text-violet-600">
+              <TbCurrencyTaka className="w-6 h-6" />
+            </div>
+          </div>
+
+          {/* Customer Conversion / Purchase Rate */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+            <div>
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
+                Buyer Conversion
+              </span>
+              <span className="text-2xl font-black text-indigo-600 mt-1 block">
+                {kpis.totalUsers > 0
+                  ? `${((kpis.activeBuyers / kpis.totalUsers) * 100).toFixed(0)}%`
+                  : '0%'}
+              </span>
+              <span className="text-[11px] text-slate-400 mt-0.5 block">Registered user buying rate</span>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
+              <FiAward className="w-6 h-6" />
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Total Ordering Customers */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+            <div>
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
+                Ordering Buyers
+              </span>
+              <span className="text-2xl font-black text-slate-900 mt-1 block">
+                {orderingKpis.totalOrderingCustomers}
+              </span>
+              <span className="text-[11px] text-slate-400 mt-0.5 block">All genuine purchasers</span>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+              <FiShoppingBag className="w-6 h-6" />
+            </div>
+          </div>
+
+          {/* Guest Customers */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+            <div>
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
+                Guest Orders
+              </span>
+              <span className="text-2xl font-black text-amber-600 mt-1 block">
+                {orderingKpis.guestCustomers}
+              </span>
+              <span className="text-[11px] text-slate-400 mt-0.5 block">Purchased without account</span>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
+              <FiUsers className="w-6 h-6" />
+            </div>
+          </div>
+
+          {/* Registered Ordering Customers */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+            <div>
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
+                Registered Buyers
+              </span>
+              <span className="text-2xl font-black text-emerald-600 mt-1 block">
+                {orderingKpis.registeredOrderingCustomers}
+              </span>
+              <span className="text-[11px] text-slate-400 mt-0.5 block">With verified accounts</span>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
+              <FiCheckCircle className="w-6 h-6" />
+            </div>
+          </div>
+
+          {/* Total Revenue */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+            <div>
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
+                Total Order Revenue
+              </span>
+              <span className="text-2xl font-black text-slate-900 mt-1 block">
+                ৳{orderingKpis.totalRevenue.toLocaleString('en-BD')}
+              </span>
+              <span className="text-[11px] text-slate-400 mt-0.5 block">{orderingKpis.totalOrders} total store orders</span>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center text-violet-600">
+              <TbCurrencyTaka className="w-6 h-6" />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ---------------- FEEDBACK BANNER ---------------- */}
       {feedback.text && (
@@ -285,36 +440,73 @@ const AdminUsers = () => {
 
         {/* Filter Buttons */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
-          <button
-            onClick={() => setFilterType('all')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-              filterType === 'all'
-                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30'
-                : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-            }`}
-          >
-            All Customers ({kpis.totalUsers})
-          </button>
-          <button
-            onClick={() => setFilterType('yes')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-              filterType === 'yes'
-                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30'
-                : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-            }`}
-          >
-            With Orders ({kpis.activeBuyers})
-          </button>
-          <button
-            onClick={() => setFilterType('no')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-              filterType === 'no'
-                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30'
-                : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-            }`}
-          >
-            No Orders Yet ({kpis.totalUsers - kpis.activeBuyers})
-          </button>
+          {activeTab === 'registered' ? (
+            <>
+              <button
+                onClick={() => setFilterType('all')}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                  filterType === 'all'
+                    ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30'
+                    : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                }`}
+              >
+                All Accounts ({kpis.totalUsers})
+              </button>
+              <button
+                onClick={() => setFilterType('yes')}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                  filterType === 'yes'
+                    ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30'
+                    : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                }`}
+              >
+                With Orders ({kpis.activeBuyers})
+              </button>
+              <button
+                onClick={() => setFilterType('no')}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                  filterType === 'no'
+                    ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30'
+                    : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                }`}
+              >
+                No Orders Yet ({kpis.totalUsers - kpis.activeBuyers})
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => setOrderingType('all')}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                  orderingType === 'all'
+                    ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30'
+                    : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                }`}
+              >
+                All Buyers ({orderingKpis.totalOrderingCustomers})
+              </button>
+              <button
+                onClick={() => setOrderingType('guest')}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                  orderingType === 'guest'
+                    ? 'bg-amber-600 text-white shadow-sm shadow-amber-600/30'
+                    : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                }`}
+              >
+                Guest Orders ({orderingKpis.guestCustomers})
+              </button>
+              <button
+                onClick={() => setOrderingType('registered')}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                  orderingType === 'registered'
+                    ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/30'
+                    : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                }`}
+              >
+                Registered Buyers ({orderingKpis.registeredOrderingCustomers})
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -323,169 +515,336 @@ const AdminUsers = () => {
         {loading ? (
           <div className="p-16 text-center text-slate-400 text-xs">
             <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-            Loading customer accounts and order records...
+            Loading customer and order records...
           </div>
-        ) : users.length === 0 ? (
-          <div className="p-16 text-center text-slate-400 text-xs">
-            <FiUsers className="w-10 h-10 mx-auto text-slate-300 mb-2" />
-            <p className="font-semibold text-slate-600">No customers found</p>
-            <p className="text-slate-400 mt-1">
-              {search
-                ? `No results matching "${search}". Try searching with a different keyword.`
-                : 'No registered customer accounts yet.'}
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs whitespace-nowrap">
-              <thead className="text-[11px] uppercase tracking-wider text-slate-500 border-b border-slate-200 bg-slate-50">
-                <tr>
-                  <th className="py-3.5 px-4">Customer Details</th>
-                  <th className="py-3.5 px-4">Contact & Location</th>
-                  <th className="py-3.5 px-4 text-center">Orders Placed</th>
-                  <th className="py-3.5 px-4">Total Spent</th>
-                  <th className="py-3.5 px-4">Last Activity</th>
-                  <th className="py-3.5 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {users.map((user) => {
-                  const initial = (user.displayName || user.email || 'U')
-                    .charAt(0)
-                    .toUpperCase();
-                  const hasOrders = user.ordersCount > 0;
+        ) : activeTab === 'registered' ? (
+          users.length === 0 ? (
+            <div className="p-16 text-center text-slate-400 text-xs">
+              <FiUsers className="w-10 h-10 mx-auto text-slate-300 mb-2" />
+              <p className="font-semibold text-slate-600">No registered accounts found</p>
+              <p className="text-slate-400 mt-1">
+                {search
+                  ? `No results matching "${search}". Try searching with a different keyword.`
+                  : 'No registered customer accounts in database yet.'}
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs whitespace-nowrap">
+                <thead className="text-[11px] uppercase tracking-wider text-slate-500 border-b border-slate-200 bg-slate-50">
+                  <tr>
+                    <th className="py-3.5 px-4">Customer Details</th>
+                    <th className="py-3.5 px-4">Contact & Location</th>
+                    <th className="py-3.5 px-4 text-center">Orders Placed</th>
+                    <th className="py-3.5 px-4">Total Spent</th>
+                    <th className="py-3.5 px-4">Last Activity</th>
+                    <th className="py-3.5 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {users.map((user) => {
+                    const initial = (user.displayName || user.email || 'U')
+                      .charAt(0)
+                      .toUpperCase();
+                    const hasOrders = user.ordersCount > 0;
 
-                  return (
-                    <tr
-                      key={user._id || user.uid}
-                      className="hover:bg-slate-50/80 transition-colors"
-                    >
-                      {/* Customer Details */}
-                      <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-3">
-                          {user.photoURL ? (
-                            <img
-                              src={user.photoURL}
-                              alt={user.displayName}
-                              className="w-9 h-9 rounded-full object-cover border border-slate-200"
-                            />
-                          ) : (
-                            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-indigo-500 to-indigo-700 text-white flex items-center justify-center font-bold text-sm shadow-sm">
+                    return (
+                      <tr
+                        key={user._id || user.uid}
+                        className="hover:bg-slate-50/80 transition-colors"
+                      >
+                        {/* Customer Details */}
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-3">
+                            {user.photoURL ? (
+                              <img
+                                src={user.photoURL}
+                                alt={user.displayName}
+                                className="w-9 h-9 rounded-full object-cover border border-slate-200"
+                              />
+                            ) : (
+                              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-indigo-500 to-indigo-700 text-white flex items-center justify-center font-bold text-sm shadow-sm">
+                                {initial}
+                              </div>
+                            )}
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-bold text-slate-900 text-xs">
+                                  {user.displayName || 'Sarail Customer'}
+                                </span>
+                                {user.authProvider && (
+                                  <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200 uppercase">
+                                    {user.authProvider}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[11px] text-slate-500 block">
+                                {user.email || 'No email provided'}
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-mono block">
+                                UID: {user.uid?.slice(0, 10)}...
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Contact & Location */}
+                        <td className="py-3.5 px-4">
+                          <div className="space-y-0.5 max-w-[220px]">
+                            {user.phone ? (
+                              <a
+                                href={`tel:${user.phone}`}
+                                className="flex items-center gap-1.5 text-[11px] font-semibold text-indigo-600 hover:underline"
+                              >
+                                <FiPhone className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                                <span>{user.phone}</span>
+                              </a>
+                            ) : (
+                              <span className="text-[11px] text-slate-400 italic">No phone saved</span>
+                            )}
+                            {user.address ? (
+                              <div className="flex items-start gap-1 text-[11px] text-slate-600 truncate">
+                                <FiMapPin className="w-3 h-3 text-slate-400 mt-0.5 flex-shrink-0" />
+                                <span className="truncate" title={user.address}>
+                                  {user.address}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-[10px] text-slate-400 block">No address saved</span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Orders Count */}
+                        <td className="py-3.5 px-4 text-center">
+                          <span
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
+                              hasOrders
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : 'bg-slate-100 text-slate-500 border border-slate-200'
+                            }`}
+                          >
+                            <FiShoppingBag className="w-3 h-3" />
+                            {user.ordersCount} {user.ordersCount === 1 ? 'Order' : 'Orders'}
+                          </span>
+                        </td>
+
+                        {/* Total Spent */}
+                        <td className="py-3.5 px-4 font-mono">
+                          <span className="font-black text-slate-900 text-sm block">
+                            ৳{user.totalSpent?.toLocaleString('en-BD') || 0}
+                          </span>
+                          {hasOrders && user.recentStatus && (
+                            <span
+                              className={`inline-block mt-0.5 px-1.5 py-0.2 rounded text-[10px] font-semibold border ${getStatusBadge(
+                                user.recentStatus
+                              )}`}
+                            >
+                              Latest: {user.recentStatus}
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Last Activity */}
+                        <td className="py-3.5 px-4">
+                          <div className="text-[11px] space-y-0.5">
+                            <span className="text-slate-600 block">
+                              Reg: {formatDate(user.registeredAt || user.createdAt)}
+                            </span>
+                            {user.lastOrderDate ? (
+                              <span className="text-indigo-600 font-medium block">
+                                Last Order: {formatDate(user.lastOrderDate)}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 text-[10px] block">
+                                Last login: {formatDate(user.lastLoginAt)}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="py-3.5 px-4 text-right">
+                          <button
+                            onClick={() => handleOpenUserOrders(user)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-95 shadow-sm shadow-indigo-600/20 transition-all cursor-pointer"
+                          >
+                            <FiEye className="w-3.5 h-3.5" />
+                            <span>View Orders ({user.ordersCount})</span>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )
+        ) : (
+          orderingCustomers.length === 0 ? (
+            <div className="p-16 text-center text-slate-400 text-xs">
+              <FiShoppingBag className="w-10 h-10 mx-auto text-slate-300 mb-2" />
+              <p className="font-semibold text-slate-600">No ordering customers found</p>
+              <p className="text-slate-400 mt-1">
+                {search
+                  ? `No results matching "${search}". Try searching with a different keyword.`
+                  : 'No store purchases recorded yet.'}
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs whitespace-nowrap">
+                <thead className="text-[11px] uppercase tracking-wider text-slate-500 border-b border-slate-200 bg-slate-50">
+                  <tr>
+                    <th className="py-3.5 px-4">Customer Details & Type</th>
+                    <th className="py-3.5 px-4">Contact & Location</th>
+                    <th className="py-3.5 px-4 text-center">Orders Placed</th>
+                    <th className="py-3.5 px-4">Total Spent</th>
+                    <th className="py-3.5 px-4">Last Order</th>
+                    <th className="py-3.5 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {orderingCustomers.map((customer) => {
+                    const initial = (customer.name || customer.phone || 'C')
+                      .charAt(0)
+                      .toUpperCase();
+                    const isRegistered = customer.customerType === 'Registered';
+
+                    return (
+                      <tr
+                        key={customer.id}
+                        className="hover:bg-slate-50/80 transition-colors"
+                      >
+                        {/* Customer Details & Type */}
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm shadow-sm text-white ${
+                                isRegistered
+                                  ? 'bg-gradient-to-tr from-emerald-500 to-emerald-700'
+                                  : 'bg-gradient-to-tr from-amber-500 to-amber-700'
+                              }`}
+                            >
                               {initial}
                             </div>
-                          )}
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-bold text-slate-900 text-xs">
-                                {user.displayName || 'Sarail Customer'}
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-bold text-slate-900 text-xs">
+                                  {customer.name || 'Customer'}
+                                </span>
+                                <span
+                                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                                    isRegistered
+                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                      : 'bg-amber-50 text-amber-800 border-amber-200'
+                                  }`}
+                                >
+                                  {isRegistered ? 'Registered Account' : 'Guest Order'}
+                                </span>
+                              </div>
+                              <span className="text-[11px] text-slate-500 block">
+                                {customer.email || 'No email provided'}
                               </span>
-                              {user.authProvider && (
-                                <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200 uppercase">
-                                  {user.authProvider}
+                              {customer.userId && (
+                                <span className="text-[10px] text-slate-400 font-mono block">
+                                  UID: {customer.userId.slice(0, 10)}...
                                 </span>
                               )}
                             </div>
-                            <span className="text-[11px] text-slate-500 block">
-                              {user.email || 'No email provided'}
-                            </span>
-                            <span className="text-[10px] text-slate-400 font-mono block">
-                              UID: {user.uid?.slice(0, 10)}...
-                            </span>
                           </div>
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* Contact & Location */}
-                      <td className="py-3.5 px-4">
-                        <div className="space-y-0.5 max-w-[220px]">
-                          {user.phone ? (
-                            <a
-                              href={`tel:${user.phone}`}
-                              className="flex items-center gap-1.5 text-[11px] font-semibold text-indigo-600 hover:underline"
+                        {/* Contact & Location */}
+                        <td className="py-3.5 px-4">
+                          <div className="space-y-0.5 max-w-[220px]">
+                            {customer.phone ? (
+                              <a
+                                href={`tel:${customer.phone}`}
+                                className="flex items-center gap-1.5 text-[11px] font-semibold text-indigo-600 hover:underline"
+                              >
+                                <FiPhone className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                                <span>{customer.phone}</span>
+                              </a>
+                            ) : (
+                              <span className="text-[11px] text-slate-400 italic">No phone</span>
+                            )}
+                            {(customer.district || customer.thana) ? (
+                              <div className="flex items-start gap-1 text-[11px] text-slate-600 truncate">
+                                <FiMapPin className="w-3 h-3 text-slate-400 mt-0.5 flex-shrink-0" />
+                                <span className="truncate" title={customer.fullAddress}>
+                                  {[customer.thana, customer.district].filter(Boolean).join(', ')}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-[10px] text-slate-400 block">No address</span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Orders Count */}
+                        <td className="py-3.5 px-4 text-center">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                            <FiShoppingBag className="w-3 h-3" />
+                            {customer.orderCount} {customer.orderCount === 1 ? 'Order' : 'Orders'}
+                          </span>
+                        </td>
+
+                        {/* Total Spent */}
+                        <td className="py-3.5 px-4 font-mono">
+                          <span className="font-black text-slate-900 text-sm block">
+                            ৳{customer.totalSpent?.toLocaleString('en-BD') || 0}
+                          </span>
+                          {customer.latestStatus && (
+                            <span
+                              className={`inline-block mt-0.5 px-1.5 py-0.2 rounded text-[10px] font-semibold border ${getStatusBadge(
+                                customer.latestStatus
+                              )}`}
                             >
-                              <FiPhone className="w-3 h-3 text-slate-400 flex-shrink-0" />
-                              <span>{user.phone}</span>
-                            </a>
-                          ) : (
-                            <span className="text-[11px] text-slate-400 italic">No phone saved</span>
+                              Status: {customer.latestStatus}
+                            </span>
                           )}
-                          {user.address ? (
-                            <div className="flex items-start gap-1 text-[11px] text-slate-600 truncate">
-                              <FiMapPin className="w-3 h-3 text-slate-400 mt-0.5 flex-shrink-0" />
-                              <span className="truncate" title={user.address}>
-                                {user.address}
+                        </td>
+
+                        {/* Last Order */}
+                        <td className="py-3.5 px-4">
+                          <div className="text-[11px] space-y-0.5">
+                            <span className="text-slate-600 block">
+                              {formatDate(customer.lastOrderDate)}
+                            </span>
+                            {customer.orders?.[0]?.invoiceNumber && (
+                              <span className="text-[10px] font-mono text-slate-400 block">
+                                #{customer.orders[0].invoiceNumber}
                               </span>
-                            </div>
-                          ) : (
-                            <span className="text-[10px] text-slate-400 block">No address saved</span>
-                          )}
-                        </div>
-                      </td>
+                            )}
+                          </div>
+                        </td>
 
-                      {/* Orders Count */}
-                      <td className="py-3.5 px-4 text-center">
-                        <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
-                            hasOrders
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : 'bg-slate-100 text-slate-500 border border-slate-200'
-                          }`}
-                        >
-                          <FiShoppingBag className="w-3 h-3" />
-                          {user.ordersCount} {user.ordersCount === 1 ? 'Order' : 'Orders'}
-                        </span>
-                      </td>
-
-                      {/* Total Spent */}
-                      <td className="py-3.5 px-4 font-mono">
-                        <span className="font-black text-slate-900 text-sm block">
-                          ৳{user.totalSpent?.toLocaleString('en-BD') || 0}
-                        </span>
-                        {hasOrders && user.recentStatus && (
-                          <span
-                            className={`inline-block mt-0.5 px-1.5 py-0.2 rounded text-[10px] font-semibold border ${getStatusBadge(
-                              user.recentStatus
-                            )}`}
+                        {/* Actions */}
+                        <td className="py-3.5 px-4 text-right">
+                          <button
+                            onClick={() =>
+                              handleOpenUserOrders({
+                                displayName: customer.name,
+                                email: customer.email,
+                                phone: customer.phone,
+                                address: customer.fullAddress,
+                                uid: customer.userId,
+                              })
+                            }
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-95 shadow-sm shadow-indigo-600/20 transition-all cursor-pointer"
                           >
-                            Latest: {user.recentStatus}
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Last Activity */}
-                      <td className="py-3.5 px-4">
-                        <div className="text-[11px] space-y-0.5">
-                          <span className="text-slate-600 block">
-                            Reg: {formatDate(user.registeredAt || user.createdAt)}
-                          </span>
-                          {user.lastOrderDate ? (
-                            <span className="text-indigo-600 font-medium block">
-                              Last Order: {formatDate(user.lastOrderDate)}
-                            </span>
-                          ) : (
-                            <span className="text-slate-400 text-[10px] block">
-                              Last login: {formatDate(user.lastLoginAt)}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Actions */}
-                      <td className="py-3.5 px-4 text-right">
-                        <button
-                          onClick={() => handleOpenUserOrders(user)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-95 shadow-sm shadow-indigo-600/20 transition-all"
-                        >
-                          <FiEye className="w-3.5 h-3.5" />
-                          <span>View Orders ({user.ordersCount})</span>
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                            <FiEye className="w-3.5 h-3.5" />
+                            <span>View Orders ({customer.orderCount})</span>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )
         )}
       </div>
 

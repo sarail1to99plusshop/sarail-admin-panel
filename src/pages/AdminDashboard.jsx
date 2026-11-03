@@ -12,6 +12,7 @@ import {
   FiDatabase,
   FiInbox,
   FiPhone,
+  FiTrash2,
 } from 'react-icons/fi';
 import { TbTruckDelivery, TbBrandWhatsapp, TbCurrencyTaka } from 'react-icons/tb';
 import {
@@ -23,6 +24,7 @@ import {
   getCourierBalanceAPI,
   fetchAdminPreOrdersAPI,
   updateAdminPreOrderStatusAPI,
+  deleteAdminPreOrderAPI,
 } from '../services/api';
 
 const AdminDashboard = () => {
@@ -34,6 +36,7 @@ const AdminDashboard = () => {
   const [lowStockProducts, setLowStockProducts] = useState([]);
   const [shippingInvoice, setShippingInvoice] = useState('');
   const [updatingPreOrderId, setUpdatingPreOrderId] = useState(null);
+  const [deletingPreOrderId, setDeletingPreOrderId] = useState(null);
   const [actionMessage, setActionMessage] = useState({ type: '', text: '' });
   const [courierBalance, setCourierBalance] = useState(null);
 
@@ -94,6 +97,38 @@ const AdminDashboard = () => {
       });
     } finally {
       setUpdatingPreOrderId(null);
+    }
+  };
+
+  const handleDeletePreOrder = async (id, productName) => {
+    if (
+      !window.confirm(
+        `Are you sure you want to permanently delete the pre-order for "${productName || 'this item'}"? This action cannot be undone.`
+      )
+    ) {
+      return;
+    }
+
+    setDeletingPreOrderId(id);
+    setActionMessage({ type: '', text: '' });
+    try {
+      const res = await deleteAdminPreOrderAPI(id);
+      if (res?.success) {
+        setRecentPreOrders((prev) => prev.filter((po) => po._id !== id && po.id !== id));
+        setActionMessage({
+          type: 'success',
+          text: 'Pre-order deleted successfully.',
+        });
+      } else {
+        throw new Error(res?.message || 'Failed to delete pre-order.');
+      }
+    } catch (err) {
+      setActionMessage({
+        type: 'error',
+        text: err.message || 'Failed to delete pre-order.',
+      });
+    } finally {
+      setDeletingPreOrderId(null);
     }
   };
 
@@ -634,6 +669,7 @@ const AdminDashboard = () => {
                   <th className="py-3 px-4 font-bold">Notes</th>
                   <th className="py-3 px-4 font-bold">Date</th>
                   <th className="py-3 px-4 font-bold">Status</th>
+                  <th className="py-3 px-4 font-bold text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
@@ -747,6 +783,18 @@ const AdminDashboard = () => {
                           <option value="Fulfilled">Fulfilled</option>
                           <option value="Cancelled">Cancelled</option>
                         </select>
+                      </td>
+
+                      <td className="py-3 px-4 text-right">
+                        <button
+                          type="button"
+                          onClick={() => handleDeletePreOrder(id, po.productName)}
+                          disabled={deletingPreOrderId === id}
+                          title={`Delete pre-order for ${po.productName || 'product'}`}
+                          className="p-1.5 rounded-lg text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-transparent hover:border-rose-200 dark:hover:border-rose-800 transition-colors cursor-pointer disabled:opacity-50 inline-flex items-center"
+                        >
+                          <FiTrash2 className={`w-3.5 h-3.5 ${deletingPreOrderId === id ? 'animate-spin' : ''}`} />
+                        </button>
                       </td>
                     </tr>
                   );

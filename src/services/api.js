@@ -345,6 +345,13 @@ export const fetchAdminUsersAPI = async ({ search = '', hasOrders = 'all' } = {}
   return res.data;
 };
 
+export const fetchAdminOrderingCustomersAPI = async ({ search = '', type = 'all' } = {}) => {
+  const res = await api.get('/api/admin/ordering-customers', {
+    params: { search, type },
+  });
+  return res.data;
+};
+
 export const fetchAdminUserOrdersAPI = async (identifier) => {
   const res = await api.get(`/api/admin/users/${encodeURIComponent(identifier)}/orders`);
   return res.data;
@@ -388,6 +395,11 @@ export const fetchAdminPreOrdersAPI = async () => {
 
 export const updateAdminPreOrderStatusAPI = async (id, status) => {
   const res = await api.patch(`/api/admin/pre-orders/${encodeURIComponent(id)}`, { status });
+  return res.data;
+};
+
+export const deleteAdminPreOrderAPI = async (id) => {
+  const res = await api.delete(`/api/admin/pre-orders/${encodeURIComponent(id)}`);
   return res.data;
 };
 
